@@ -1,0 +1,27 @@
+import { PublicKey } from "@solana/web3.js";
+
+export const FEE_DESTINATION_ID = new PublicKey("7YttLkHDoNj9wyDur5pM1ejNaAvT9X4eqaYcHQqtj2G5");
+
+export const CREATE_CPMM_POOL_PROGRAM = new PublicKey("CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C");
+export const CREATE_CPMM_POOL_AUTH = new PublicKey("GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL");
+export const CREATE_CPMM_POOL_FEE_ACC = new PublicKey("DNXgeM9EiiaAbaWvwjHj9fQQLAX5ZsfHyvmYUNRAdNC8");
+
+export const DEV_CREATE_CPMM_POOL_PROGRAM = new PublicKey("CPMDWBwJDtYax9qW7AyRuVC19Cc4L4Vcy4n2BHAbHkCW");
+export const DEV_CREATE_CPMM_POOL_AUTH = new PublicKey("7rQ1QFNosMkUCuh7Z7fPbTHvh73b68sQYdirycEzJVuw");
+export const DEV_CREATE_CPMM_POOL_FEE_ACC = new PublicKey("G11FKBRaAkHAKuLCgLM6K6NUc9rTjPAznRCjZifrTQe2");
+
+export const ALL_PROGRAM_ID = {
+  CREATE_CPMM_POOL_PROGRAM,
+  CREATE_CPMM_POOL_AUTH,
+  CREATE_CPMM_POOL_FEE_ACC,
+};
+
+export type ProgramIdConfig = Partial<typeof ALL_PROGRAM_ID>;
+
+export const DEVNET_PROGRAM_ID = {
+  CREATE_CPMM_POOL_PROGRAM: DEV_CREATE_CPMM_POOL_PROGRAM,
+  CREATE_CPMM_POOL_AUTH: DEV_CREATE_CPMM_POOL_AUTH,
+  CREATE_CPMM_POOL_FEE_ACC: DEV_CREATE_CPMM_POOL_FEE_ACC,
+
+  FEE_DESTINATION_ID: new PublicKey("3XMrhbv989VxAMi3DErLV9eJht1pHppW5LbKxe9fkEFR"),
+};
