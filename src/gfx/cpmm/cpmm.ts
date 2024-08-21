@@ -220,6 +220,7 @@ export default class CpmmModule extends ModuleBase {
     };
 
     const mockPoolStats = {
+      feesApr: 0,
       fees: 0,
       volume: 0,
       apr: 0
