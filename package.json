@@ -31,9 +31,10 @@
     "build-dist": "rm -rf dist && mkdir dist && yarn build-docs",
     "build-lib": "rm -rf lib && tsup src --format cjs,esm --dts --sourcemap --no-splitting --minify -d lib --silent",
     "build-all": "yarn build-dist && yarn build-lib",
-    "build": "yarn build-lib",
+    "build": "yarn build-lib && yarn copy-package-json",
     "push": "yarn build && yarn publish",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "copy-package-json": "cp package.json lib/package.json"
   },
   "resolutions": {
     "@solana/spl-token": "^0.4.6",
