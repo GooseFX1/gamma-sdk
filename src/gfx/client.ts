@@ -1,7 +1,7 @@
 import { Connection, Keypair, PublicKey, EpochInfo, Commitment } from "@solana/web3.js";
 import { merge } from "lodash";
 
-import { Api, API_URL_CONFIG, ApiV3Token } from "../api";
+import { Api, API_URL_CONFIG, JupiterListToken } from "../api";
 import { EMPTY_CONNECTION, EMPTY_OWNER } from "../common/error";
 import { createLogger, Logger } from "../common/logger";
 import { Owner } from "../common/owner";
@@ -50,7 +50,7 @@ interface DataBase<T> {
   extInfo?: Record<string, any>;
 }
 interface ApiData {
-  jupTokenList?: DataBase<ApiV3Token[]>;
+  jupTokenList?: DataBase<JupiterListToken[]>;
 }
 
 export class GfxCpmmClient {
@@ -187,7 +187,7 @@ export class GfxCpmmClient {
     return new Date().getTime() - time > this._apiCacheTime;
   }
 
-  public async fetchJupTokenList(forceUpdate?: boolean): Promise<ApiV3Token[]> {
+  public async fetchJupTokenList(forceUpdate?: boolean): Promise<JupiterListToken[]> {
     const prevFetched = this.apiData.jupTokenList;
     if (prevFetched && !this.isCacheInvalidate(prevFetched.fetched) && !forceUpdate) return prevFetched.data;
     try {

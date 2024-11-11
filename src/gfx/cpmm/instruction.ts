@@ -1,18 +1,39 @@
 import BN from "bn.js";
 
-import { AccountMeta, PublicKey, TransactionInstruction } from "@solana/web3.js";
+import { AccountMeta, PublicKey, SystemProgram, TransactionInstruction } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { SYSTEM_PROGRAM_ID, RENT_PROGRAM_ID, MEMO_PROGRAM_ID2, createLogger } from "@/common";
 
 import { struct, u64 } from "@/marshmallow";
 const logger = createLogger("Gfx_cpmm");
 const anchorDataBuf = {
+  initUserLiquidity: [227, 221, 200, 212, 36, 107, 149, 36],
   initialize: [175, 175, 109, 31, 13, 152, 155, 237],
   deposit: [242, 35, 198, 137, 82, 225, 242, 182],
   withdraw: [183, 18, 70, 156, 148, 109, 161, 34],
   swapBaseInput: [143, 190, 90, 218, 196, 30, 51, 222],
   swapBaseOutput: [55, 217, 98, 86, 163, 74, 180, 173],
 };
+
+export function makeInitUserPoolLiquidityInstruction(
+  programId: PublicKey,
+  user: PublicKey,
+  poolId: PublicKey,
+  userPoolLiquidity: PublicKey,
+): TransactionInstruction {
+  const keys: Array<AccountMeta> = [
+    { pubkey: user, isSigner: true, isWritable: true },
+    { pubkey: poolId, isSigner: false, isWritable: true },
+    { pubkey: userPoolLiquidity, isSigner: false, isWritable: true },
+    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+  ]
+
+  return new TransactionInstruction({
+    keys,
+    programId,
+    data: Buffer.from([...anchorDataBuf.initUserLiquidity])
+  })
+}
 
 export function makeCreateCpmmPoolInInstruction(
   programId: PublicKey,
@@ -85,15 +106,13 @@ export function makeDepositCpmmInInstruction(
   owner: PublicKey,
   authority: PublicKey,
   poolId: PublicKey,
-  userLpAccount: PublicKey,
+  userLiquidityAccount: PublicKey,
   userVaultA: PublicKey,
   userVaultB: PublicKey,
   vaultA: PublicKey,
   vaultB: PublicKey,
   mintA: PublicKey,
   mintB: PublicKey,
-  lpMint: PublicKey,
-
   lpAmount: BN,
   amountMaxA: BN,
   amountMaxB: BN,
@@ -104,7 +123,7 @@ export function makeDepositCpmmInInstruction(
     { pubkey: owner, isSigner: true, isWritable: false },
     { pubkey: authority, isSigner: false, isWritable: false },
     { pubkey: poolId, isSigner: false, isWritable: true },
-    { pubkey: userLpAccount, isSigner: false, isWritable: true },
+    { pubkey: userLiquidityAccount, isSigner: false, isWritable: true },
     { pubkey: userVaultA, isSigner: false, isWritable: true },
     { pubkey: userVaultB, isSigner: false, isWritable: true },
     { pubkey: vaultA, isSigner: false, isWritable: true },
@@ -113,7 +132,6 @@ export function makeDepositCpmmInInstruction(
     { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: mintA, isSigner: false, isWritable: false },
     { pubkey: mintB, isSigner: false, isWritable: false },
-    { pubkey: lpMint, isSigner: false, isWritable: true },
   ];
 
   const data = Buffer.alloc(dataLayout.span);
@@ -143,26 +161,24 @@ export function makeWithdrawCpmmInInstruction(
   owner: PublicKey,
   authority: PublicKey,
   poolId: PublicKey,
-  userLpAccount: PublicKey,
+  userLiquidityAccount: PublicKey,
   userVaultA: PublicKey,
   userVaultB: PublicKey,
   vaultA: PublicKey,
   vaultB: PublicKey,
   mintA: PublicKey,
   mintB: PublicKey,
-  lpMint: PublicKey,
-
   lpAmount: BN,
-  amountMinA: BN,
-  amountMinB: BN,
+  amountMintA: BN,
+  amountMintB: BN,
 ): TransactionInstruction {
-  const dataLayout = struct([u64("lpAmount"), u64("amountMinA"), u64("amountMinB")]);
+  const dataLayout = struct([u64("lpAmount"), u64("amountMintA"), u64("amountMintB")]);
 
   const keys: Array<AccountMeta> = [
     { pubkey: owner, isSigner: true, isWritable: false },
     { pubkey: authority, isSigner: false, isWritable: false },
     { pubkey: poolId, isSigner: false, isWritable: true },
-    { pubkey: userLpAccount, isSigner: false, isWritable: true },
+    { pubkey: userLiquidityAccount, isSigner: false, isWritable: true },
     { pubkey: userVaultA, isSigner: false, isWritable: true },
     { pubkey: userVaultB, isSigner: false, isWritable: true },
     { pubkey: vaultA, isSigner: false, isWritable: true },
@@ -171,7 +187,6 @@ export function makeWithdrawCpmmInInstruction(
     { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: mintA, isSigner: false, isWritable: false },
     { pubkey: mintB, isSigner: false, isWritable: false },
-    { pubkey: lpMint, isSigner: false, isWritable: true },
     { pubkey: MEMO_PROGRAM_ID2, isSigner: false, isWritable: false },
   ];
 
@@ -179,8 +194,8 @@ export function makeWithdrawCpmmInInstruction(
   dataLayout.encode(
     {
       lpAmount,
-      amountMinA,
-      amountMinB,
+      amountMintA,
+      amountMintB,
     },
     data,
   );

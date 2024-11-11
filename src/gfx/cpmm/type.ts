@@ -1,12 +1,18 @@
 import { EpochInfo, PublicKey } from "@solana/web3.js";
-import { ApiConfig, ApiPool, ApiV3Token, ApiPoolKeys } from "@/api/type";
+import { ConfigInfo, PoolInfo, GammaToken, PoolKeys } from "@/api/type";
 import { TxVersion } from "@/common/txTool/txType";
 import BN from "bn.js";
 import { ComputeBudgetConfig, GetTransferAmountFee } from "@/gfx/type";
 import { SwapResult } from "./curve/calculator";
 import { Percent } from "@/module";
-import { CpmmPoolInfoLayout } from "./layout";
+import { CpmmObservationStateLayout, CpmmPoolInfoLayout, CpmmUserPoolLiquidityLayout, ObservationLayout } from "./layout";
 import Decimal from "decimal.js";
+
+interface MintInfo {
+  address: string;
+  decimals: number;
+  programId: string;
+}
 
 export interface CpmmConfigInfoInterface {
   bump: number;
@@ -59,12 +65,12 @@ export interface CpmmPoolInfoInterface {
 export interface CreateCpmmPoolParam<T> {
   programId: PublicKey;
   poolFeeAccount: PublicKey;
-  mintA: Pick<ApiV3Token, "address" | "decimals" | "programId">;
-  mintB: Pick<ApiV3Token, "address" | "decimals" | "programId">;
+  mintA: MintInfo;
+  mintB: MintInfo;
   mintAAmount: BN;
   mintBAmount: BN;
   startTime: BN;
-  feeConfig: ApiConfig;
+  feeConfig: ConfigInfo;
 
   associatedOnly: boolean;
   checkCreateATAOwner?: boolean;
@@ -85,16 +91,16 @@ export interface CreateCpmmPoolAddress {
   vaultA: PublicKey;
   vaultB: PublicKey;
   observationId: PublicKey;
-  mintA: ApiV3Token;
-  mintB: ApiV3Token;
+  mintA: MintInfo;
+  mintB: MintInfo;
   programId: PublicKey;
   poolFeeAccount: PublicKey;
-  feeConfig: ApiConfig;
+  feeConfig: ConfigInfo;
 }
 
 export interface AddCpmmLiquidityParams<T = TxVersion.LEGACY> {
-  poolInfo: ApiPool;
-  poolKeys?: ApiPoolKeys;
+  poolInfo: PoolInfo;
+  poolKeys?: PoolKeys;
   payer?: PublicKey;
   inputAmount: BN;
   baseIn: boolean;
@@ -114,8 +120,8 @@ export interface AddCpmmLiquidityParams<T = TxVersion.LEGACY> {
 }
 
 export interface WithdrawCpmmLiquidityParams<T = TxVersion.LEGACY> {
-  poolInfo: ApiPool;
-  poolKeys?: ApiPoolKeys;
+  poolInfo: PoolInfo;
+  poolKeys?: PoolKeys;
   payer?: PublicKey;
   lpAmount: BN;
   slippage: Percent;
@@ -124,8 +130,8 @@ export interface WithdrawCpmmLiquidityParams<T = TxVersion.LEGACY> {
 }
 
 export interface CpmmSwapParams<T = TxVersion.LEGACY> {
-  poolInfo: ApiPool;
-  poolKeys?: ApiPoolKeys;
+  poolInfo: PoolInfo;
+  poolKeys?: PoolKeys;
   payer?: PublicKey;
   baseIn: boolean;
   fixedOut?: boolean;
@@ -143,7 +149,7 @@ export interface CpmmSwapParams<T = TxVersion.LEGACY> {
 }
 
 export interface ComputePairAmountParams {
-  poolInfo: ApiPool;
+  poolInfo: PoolInfo;
   baseReserve: BN;
   quoteReserve: BN;
   amount: string | Decimal;
@@ -166,7 +172,11 @@ export type CpmmComputeData = {
   id: PublicKey;
   version: 7;
   configInfo: CpmmConfigInfoInterface;
-  mintA: ApiV3Token;
-  mintB: ApiV3Token;
+  mintA: MintInfo;
+  mintB: MintInfo;
   authority: PublicKey;
 } & Omit<CpmmRpcData, "configInfo" | "mintA" | "mintB">;
+
+export type CpmmObservation = ReturnType<typeof ObservationLayout.decode>
+export type CpmmObservationState = ReturnType<typeof CpmmObservationStateLayout.decode>
+export type UserLiquidityAccount = ReturnType<typeof CpmmUserPoolLiquidityLayout.decode>

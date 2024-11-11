@@ -3,7 +3,6 @@ import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { TokenInfo } from "./type";
 
 export const SOL_INFO: TokenInfo = {
-  chainId: 101,
   address: PublicKey.default.toBase58(),
   programId: TOKEN_PROGRAM_ID.toBase58(),
   decimals: 9,
@@ -19,7 +18,6 @@ export const SOL_INFO: TokenInfo = {
 };
 
 export const TOKEN_WSOL: TokenInfo = {
-  chainId: 101,
   address: "So11111111111111111111111111111111111111112",
   programId: TOKEN_PROGRAM_ID.toBase58(),
   decimals: 9,

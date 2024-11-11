@@ -1,7 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 import { MintLayout, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
-import { ApiV3Token } from "@/api/type";
+import { GammaToken } from "@/api/type";
 import ModuleBase, { ModuleBaseProps } from "../moduleBase";
 import { LoadParams } from "../type";
 
@@ -39,9 +39,7 @@ export default class TokenModule extends ModuleBase {
         ...token,
         type: "jupiter",
         priority: 1,
-        programId:
-          token.programId ??
-          (token.tags.includes("token-2022") ? TOKEN_2022_PROGRAM_ID.toBase58() : TOKEN_PROGRAM_ID.toBase58()),
+        programId: token.tags.includes("token-2022") ? TOKEN_2022_PROGRAM_ID.toBase58() : TOKEN_PROGRAM_ID.toBase58(),
       });
       this._mintGroup.jup.add(token.address);
     });
@@ -74,7 +72,7 @@ export default class TokenModule extends ModuleBase {
 
   /** === util functions === */
 
-  public async getTokenInfo(mint: string | PublicKey): Promise<ApiV3Token> {
+  public async getTokenInfo(mint: string | PublicKey): Promise<GammaToken> {
     if (!mint) throw new Error("please input mint");
     const mintStr = mint.toString();
     const info = this._tokenMap.get(mintStr);
@@ -93,17 +91,18 @@ export default class TokenModule extends ModuleBase {
     const data = MintLayout.decode(onlineInfo.data);
     const mintSymbol = mintStr.toString().substring(0, 6);
     const fullInfo = {
-      chainId: 101,
+      chainId: 101 as 101,
+      priority: 1,
       address: mintStr,
-      programId: onlineInfo.owner.toBase58(),
-      logoURI: "",
-      symbol: mintSymbol,
       name: mintSymbol,
+      symbol: mintSymbol,
       decimals: data.decimals,
-      tags: [],
-      extensions: {},
-      priority: 0,
-      type: "unknown",
+      logoURI: "",
+      tags: new Array<string>(),
+      dailyVolume: 0,
+      price: 0,
+      freezeAuthority: data.freezeAuthority.toBase58(),
+      mintAuthority: data.mintAuthority.toBase58(),
     };
     this._mintGroup.extra.add(mintStr);
     this._tokenMap.set(mintStr, fullInfo);

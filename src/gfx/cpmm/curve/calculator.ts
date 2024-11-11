@@ -1,10 +1,10 @@
 import BN from "bn.js";
-import { CpmmFee } from "./fee";
+import { DynamicFee } from "./fee";
 import { ConstantProductCurve } from "./constantProduct";
-import { ApiV3Token } from "@/api/type";
 import { PublicKey } from "@solana/web3.js";
 import { BNDivCeil } from "@/common";
 import Decimal from "decimal.js-light";
+import { CpmmObservationState } from "../type";
 
 export enum RoundDirection {
   Floor,
@@ -29,8 +29,19 @@ export class CurveCalculator {
     if (tokenAmount1.isZero()) throw Error("tokenAmount1 is zero");
   }
 
-  static swap(sourceAmount: BN, swapSourceAmount: BN, swapDestinationAmount: BN, tradeFeeRate: BN): SwapResult {
-    const tradeFee = CpmmFee.tradingFee(sourceAmount, tradeFeeRate);
+  static swap(
+    sourceAmount: BN, 
+    swapSourceAmount: BN, 
+    swapDestinationAmount: BN, 
+    tradeFeeRate: BN, 
+    observationState: CpmmObservationState
+  ): SwapResult {
+    const tradeFee = DynamicFee.calculateDynamicFee(
+      new BN(new Date().getTime() / 1000),
+      observationState,
+      'volatility',
+      tradeFeeRate
+    );
 
     const sourceAmountLessFees = sourceAmount.sub(tradeFee);
 
@@ -59,8 +70,14 @@ export class CurveCalculator {
     outputMint,
     outputAmount,
   }: {
-    poolMintA: ApiV3Token;
-    poolMintB: ApiV3Token;
+    poolMintA: {
+      address: string,
+      decimals: number,
+    };
+    poolMintB: {
+      address: string
+      decimals: number
+    };
     tradeFeeRate: BN;
     baseReserve: BN;
     quoteReserve: BN;

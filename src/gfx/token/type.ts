@@ -1,7 +1,8 @@
-import { ApiV3Token } from "@/api/type";
+import { GammaToken } from "@/api/type";
 import { TokenProps, Token } from "@/module/token";
 
-export type TokenInfo = ApiV3Token & {
+export type TokenInfo = GammaToken & {
+  programId?: string;
   priority: number;
   userAdded?: boolean;
   type?: string;
@@ -26,16 +27,4 @@ export type SplToken = TokenProps & {
     [key in "coingeckoId" | "website" | "whitepaper"]?: string;
   };
   userAdded?: boolean; // only if token is added by user
-};
-
-export type LpToken = Token & {
-  isLp: true;
-  base: SplToken;
-  quote: SplToken;
-  icon: string;
-  /** mint. for `<TokenSelector>`*/
-  id: string;
-  extensions: {
-    [key in "coingeckoId" | "website" | "whitepaper"]?: string;
-  };
 };
