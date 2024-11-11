@@ -7,6 +7,7 @@ const POOL_SEED = Buffer.from("pool", "utf8");
 const POOL_LP_MINT_SEED = Buffer.from("pool_lp_mint", "utf8");
 const POOL_VAULT_SEED = Buffer.from("pool_vault", "utf8");
 const OBSERVATION_SEED = Buffer.from("observation", "utf8");
+const USER_POOL_LIQUIDITY_SEED = Buffer.from("user-pool-liquidity", "utf8");
 
 export function getPdaPoolAuthority(programId: PublicKey): {
   publicKey: PublicKey;
@@ -66,6 +67,17 @@ export function getPdaObservationId(
   nonce: number;
 } {
   return findProgramAddress([OBSERVATION_SEED, poolId.toBuffer()], programId);
+}
+
+export function getPdaUserLiquidity(
+  programId: PublicKey,
+  poolId: PublicKey,
+  owner: PublicKey,
+): {
+  publicKey: PublicKey;
+  nonce: number;
+} {
+  return findProgramAddress([USER_POOL_LIQUIDITY_SEED, poolId.toBuffer(), owner.toBuffer()], programId)
 }
 
 function u16ToBytes(num: number): Uint8Array {

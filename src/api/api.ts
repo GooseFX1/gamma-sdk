@@ -4,13 +4,13 @@ import { createLogger, sleep } from "../common";
 import { Cluster } from "../solana";
 
 import {
-  ApiConfig,
-  ApiPaginatedPools,
-  ApiPool,
-  ApiPoolKeys,
-  ApiV3Token,
+  ConfigInfo,
+  PaginatedPoolInfos,
+  PoolInfo,
+  PoolKeys,
+  GammaToken,
   FetchPoolParams,
-  PoolFetchType,
+  JupiterListToken,
 } from "./type";
 import { API_URLS, API_URL_CONFIG } from "./url";
 import { updateReqHistory } from "./utils";
@@ -18,7 +18,7 @@ import { PublicKey } from "@solana/web3.js";
 import { solToWSol } from "../common";
 
 const logger = createLogger("Gfx_Api");
-const poolKeysCache: Map<string, ApiPoolKeys> = new Map();
+const poolKeysCache: Map<string, PoolKeys> = new Map();
 
 export async function endlessRetry<T>(name: string, call: () => Promise<T>, interval = 1000): Promise<T> {
   let result: T | undefined;
@@ -119,43 +119,43 @@ export class Api {
     );
   }
 
-  async getConfigs(): Promise<ApiConfig[]> {
-    const res = await this.api.get(this.urlConfigs.CPMM_CONFIG || API_URLS.CPMM_CONFIG);
+  async getConfigs(): Promise<ConfigInfo> {
+    const res = await this.api.get(this.urlConfigs.CONFIG || API_URLS.CONFIG);
     return res.data;
   }
 
-  async getJupTokenList(): Promise<ApiV3Token[]> {
+  async getJupTokenList(): Promise<JupiterListToken[]> {
     return this.api.get("", {
       baseURL: this.urlConfigs.JUP_TOKEN_LIST || API_URLS.JUP_TOKEN_LIST,
     });
   }
 
-  async getTokenInfo(mint: (string | PublicKey)[]): Promise<ApiV3Token[]> {
+  async getTokenInfo(mint: (string | PublicKey)[]): Promise<GammaToken[]> {
     const res = await this.api.get(
-      (this.urlConfigs.MINT_INFO_ID || API_URLS.MINT_INFO_ID) + `?mints=${mint.map((m) => m.toString()).join(",")}`,
+      (this.urlConfigs.TOKEN_LIST || API_URLS.TOKEN_LIST) + `?ids=${mint.map((m) => m.toString()).join(",")}`,
     );
     return res.data;
   }
 
-  async getPoolList(props: FetchPoolParams = {}): Promise<ApiPaginatedPools> {
-    const { type = "all", sort = "liquidity", order = "desc", page = 0, pageSize = 100 } = props;
-    const res = await this.api.get<ApiPaginatedPools>(
+  async getPoolList(props: FetchPoolParams = {}): Promise<PaginatedPoolInfos> {
+    const { poolType = 'all', sortBy = 'liquidity', sortOrder = 'desc', page = 0, pageSize = 100, search } = props;
+    const res = await this.api.get(
       (this.urlConfigs.POOL_LIST || API_URLS.POOL_LIST) +
-        `?poolType=${type}&poolSortField=${sort}&sortType=${order}&page=${page}&pageSize=${pageSize}`,
+        `?poolType=${poolType}&sortOrder=${sortOrder}&sortBy=${sortBy}&page=${page}&pageSize=${pageSize}&search=${search}`,
     );
     return res.data;
   }
 
-  async fetchPoolById(props: { ids: string }): Promise<ApiPool[]> {
+  async fetchPoolById(props: { ids: string }): Promise<PoolInfo[]> {
     const { ids } = props;
-    const res = await this.api.get((this.urlConfigs.POOL_SEARCH_BY_ID || API_URLS.POOL_SEARCH_BY_ID) + `?ids=${ids}`);
+    const res = await this.api.get((this.urlConfigs.POOL_BY_IDS || API_URLS.POOL_BY_IDS) + `?ids=${ids}`);
     return res.data;
   }
 
-  async fetchPoolKeysById(props: { idList: string[] }): Promise<ApiPoolKeys[]> {
+  async fetchPoolKeysById(props: { idList: string[] }): Promise<PoolKeys[]> {
     const { idList } = props;
 
-    const cacheList: ApiPoolKeys[] = [];
+    const cacheList: PoolKeys[] = [];
 
     const readyList = idList.filter((poolId) => {
       if (poolKeysCache.has(poolId)) {
@@ -165,10 +165,10 @@ export class Api {
       return true;
     });
 
-    let data: ApiPoolKeys[] = [];
+    let data: PoolKeys[] = [];
     if (readyList.length) {
-      const res = await this.api.get<ApiPoolKeys[]>(
-        (this.urlConfigs.POOL_KEY_BY_ID || API_URLS.POOL_KEY_BY_ID) + `?ids=${readyList.join(",")}`,
+      const res = await this.api.get<PoolKeys[]>(
+        (this.urlConfigs.POOL_KEYS_BY_IDS || API_URLS.POOL_KEYS_BY_IDS) + `?ids=${readyList.join(",")}`,
       );
       data = res.data.filter(Boolean);
       data.forEach((poolKey) => {
@@ -183,14 +183,14 @@ export class Api {
     props: {
       mint1: string | PublicKey;
       mint2?: string | PublicKey;
-    } & Omit<FetchPoolParams, "pageSize">,
-  ): Promise<ApiPaginatedPools> {
+    } & Omit<FetchPoolParams, 'pageSize'>,
+  ): Promise<PaginatedPoolInfos> {
     const {
       mint1: propMint1,
       mint2: propMint2,
-      type = PoolFetchType.All,
-      sort = "default",
-      order = "desc",
+      poolType = 'all',
+      sortBy = 'liquidity',
+      sortOrder = 'desc',
       page = 1,
     } = props;
 
@@ -201,8 +201,8 @@ export class Api {
     const [baseMint, quoteMint] = mint2 && mint1 > mint2 ? [mint2, mint1] : [mint1, mint2];
 
     const res = await this.api.get(
-      (this.urlConfigs.POOL_SEARCH_MINT || API_URLS.POOL_SEARCH_MINT) +
-        `?mint1=${baseMint}&mint2=${quoteMint}&poolType=${type}&poolSortField=${sort}&sortType=${order}&pageSize=100&page=${page}`,
+      (this.urlConfigs.POOL_BY_MINTS || API_URLS.POOL_BY_MINTS) +
+        `?mint1=${baseMint}&mint2=${quoteMint}&poolType=${poolType}&sortBy=${sortBy}&sortOrder=${sortOrder}&pageSize=100&page=${page}`,
     );
     return res.data;
   }

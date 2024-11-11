@@ -1,11 +1,11 @@
 import { Connection, PublicKey } from "@solana/web3.js";
-import { MintLayout, RawMint, TOKEN_PROGRAM_ID, TransferFeeConfig } from "@solana/spl-token";
+import { MintLayout, RawMint, TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, TransferFeeConfig } from "@solana/spl-token";
 import { Token, TokenAmount } from "@/module";
 import { BigNumberish } from "@/common/bignumber";
 import { TokenInfo } from "./type";
 import { SOL_INFO, TOKEN_WSOL } from "./constant";
 
-import { ApiV3Token } from "@/api";
+import { JupiterListToken } from "@/api";
 import { solToWSol } from "@/common";
 
 export const parseTokenInfo = async ({
@@ -41,7 +41,6 @@ export const toTokenInfo = ({
     symbol: pubStr,
     logoURI,
     extensions: {},
-    chainId: 101,
     programId: programId.toString(),
     name: pubStr,
     tags: [],
@@ -79,17 +78,17 @@ export const toTokenAmount = ({
     name,
   );
 
-export function solToWSolToken<T extends ApiV3Token | TokenInfo>(token: T): T {
+export function solToWSolToken<T extends JupiterListToken | TokenInfo>(token: T): T {
   if (token.address === SOL_INFO.address) return TOKEN_WSOL as T;
   return token;
 }
 
-export function wSolToSolToken<T extends ApiV3Token | TokenInfo>(token: T): T {
+export function wSolToSolToken<T extends JupiterListToken | TokenInfo>(token: T): T {
   if (token.address === TOKEN_WSOL.address) return SOL_INFO as T;
   return token;
 }
 
-export const toApiV3Token = ({
+export const toGammaApiToken = ({
   address,
   programId,
   decimals,
@@ -98,10 +97,9 @@ export const toApiV3Token = ({
   address: string;
   programId: string;
   decimals: number;
-} & Partial<ApiV3Token>): ApiV3Token => ({
-  chainId: 101,
-  address: solToWSol(address).toBase58(),
+} & Partial<JupiterListToken>): JupiterListToken & { programId: string } => ({
   programId,
+  address: solToWSol(address).toBase58(),
   logoURI: "",
   symbol: "",
   name: "",
@@ -111,7 +109,7 @@ export const toApiV3Token = ({
   ...props,
 });
 
-export const toFeeConfig = (config?: TransferFeeConfig): ApiV3Token["extensions"]["feeConfig"] | undefined =>
+export const toFeeConfig = (config?: TransferFeeConfig): JupiterListToken["extensions"]["feeConfig"] | undefined =>
   config
     ? {
         ...config,
