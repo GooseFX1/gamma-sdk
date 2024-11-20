@@ -10,7 +10,7 @@ export const getTime = (value?: DateParam): number => getDate(value).getTime();
 export function isDateBefore(timestampA: TimeStamp, timestampB: TimeStamp, options?: { unit?: "ms" | "s" }): boolean {
   const realTimestampB = isNumber(timestampB)
     ? (timestampB as number) * (options?.unit === "s" ? 1000 : 1)
-    : timestampB;
+    : new Date(timestampB).getTime();
   return new Date(timestampA).getTime() <= realTimestampB;
 }
 
@@ -18,7 +18,7 @@ export function isDateBefore(timestampA: TimeStamp, timestampB: TimeStamp, optio
 export function isDateAfter(timestampA: TimeStamp, timestampB: TimeStamp, options?: { unit?: "ms" | "s" }): boolean {
   const realTimestampB = isNumber(timestampB)
     ? (timestampB as number) * (options?.unit === "s" ? 1000 : 1)
-    : timestampB;
+    : new Date(timestampB).getTime();
   return new Date(timestampA).getTime() > realTimestampB;
 }
 

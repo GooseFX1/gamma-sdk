@@ -1,5 +1,6 @@
 {
   "extends": "@tsconfig/node14/tsconfig.json",
+  
   "compilerOptions": {
     "target": "es6",
     "lib": ["es2019", "DOM"],
@@ -17,10 +18,11 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["./src/**/*", "utils1216"],
+  "include": ["./src/**/*", "examples"],
   "exclude": ["node_modules"],
   "ts-node": {
+    "require": ["tsconfig-paths/register"],
     "files": true
-  },
-  "moduleResolution": "nodeNext"
+  }
 }
+  

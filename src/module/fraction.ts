@@ -2,7 +2,9 @@ import _Big from "big.js";
 import BN from "bn.js";
 import _Decimal from "decimal.js-light";
 
-import { BigNumberish, parseBigNumberish, Rounding } from "../common/bignumber";
+//import { BigNumberish, parseBigNumberish, Rounding } from "../common/bignumber";
+import { BigNumberish, parseBigNumberish, Rounding } from "../common/number";
+
 import { createLogger } from "../common/logger";
 
 import toFormat, { WrappedBig } from "./formatter";
@@ -14,6 +16,7 @@ type Big = WrappedBig;
 
 const Decimal = toFormat(_Decimal);
 
+console.log('Rounding:', Rounding); // Should log the enum
 const toSignificantRounding = {
   [Rounding.ROUND_DOWN]: Decimal.ROUND_DOWN,
   [Rounding.ROUND_HALF_UP]: Decimal.ROUND_HALF_UP,

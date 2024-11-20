@@ -30,31 +30,31 @@ export class Logger {
     return level <= this.logLevel;
   }
 
-  public error(...props): Logger {
+  public error(...props: unknown[]): Logger {
     if (!this.isLogLevel(LogLevel.Error)) return this;
     console.error(this.time, this.name, "sdk logger error", ...props);
     return this;
   }
 
-  public logWithError(...props): Logger {
+  public logWithError(...props: unknown[]): Logger {
     // this.error(...props)
     const msg = props.map((arg) => (typeof arg === "object" ? JSON.stringify(arg) : arg)).join(", ");
     throw new Error(msg);
   }
 
-  public warning(...props): Logger {
+  public warning(...props: unknown[]): Logger {
     if (!this.isLogLevel(LogLevel.Warning)) return this;
     console.warn(this.time, this.name, "sdk logger warning", ...props);
     return this;
   }
 
-  public info(...props): Logger {
+  public info(...props: unknown[]): Logger {
     if (!this.isLogLevel(LogLevel.Info)) return this;
     console.info(this.time, this.name, "sdk logger info", ...props);
     return this;
   }
 
-  public debug(...props): Logger {
+  public debug(...props: unknown[]): Logger {
     if (!this.isLogLevel(LogLevel.Debug)) return this;
     console.debug(this.time, this.name, "sdk logger debug", ...props);
     return this;

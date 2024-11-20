@@ -1,5 +1,5 @@
 export const API_URLS = {
-  BASE_HOST: "https://amm-api.goose-fx.io",
+  BASE_HOST: "https://gamma-api.goosefx.io",
   /** id: string */
   CONFIG: "/config",
   /** ids: idList.join(',') */

@@ -1,6 +1,7 @@
 import { Fraction, Percent, Price, TokenAmount } from "../module";
 
-import { BN_ZERO, Numberish, parseNumberInfo } from "./bignumber";
+import { Numberish, parseNumberInfo } from "./bignumber";
+import { BN_ZERO } from "./number";
 
 export default function toFraction(value: Numberish): Fraction {
   //  to complete math format(may have decimal), not int
