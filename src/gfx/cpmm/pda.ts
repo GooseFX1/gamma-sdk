@@ -101,15 +101,12 @@ export function getCreatePoolKeys({
   poolId: PublicKey;
   configId: PublicKey;
   authority: PublicKey;
-  lpMint: PublicKey;
   vaultA: PublicKey;
   vaultB: PublicKey;
   observationId: PublicKey;
 } {
-  // const configId = getCpmmPdaAmmConfigId(programId, 0).publicKey;
   const authority = getPdaPoolAuthority(programId).publicKey;
   const poolId = getCpmmPdaPoolId(programId, configId, mintA, mintB).publicKey;
-  const lpMint = getPdaLpMint(programId, poolId).publicKey;
   const vaultA = getPdaVault(programId, poolId, mintA).publicKey;
   const vaultB = getPdaVault(programId, poolId, mintB).publicKey;
   const observationId = getPdaObservationId(programId, poolId).publicKey;
@@ -118,7 +115,6 @@ export function getCreatePoolKeys({
     poolId,
     configId,
     authority,
-    lpMint,
     vaultA,
     vaultB,
     observationId,
