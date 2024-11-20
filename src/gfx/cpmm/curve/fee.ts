@@ -21,6 +21,23 @@ type FeeType = 'volatility'
 
 export class DynamicFee {
   static calculateDynamicFee(
+    amount: BN,
+    blockTimestamp: BN,
+    observationState: CpmmObservationState,
+    feeType: FeeType,
+    baseFees: BN
+  ): BN {
+    let feeRate = this.calculateDynamicFeeRate(
+      blockTimestamp,
+      observationState,
+      feeType,
+      baseFees
+    )
+
+    return (amount.mul(feeRate).add(FEE_RATE_DENOMINATOR_VALUE).subn(1)).div(FEE_RATE_DENOMINATOR_VALUE)
+  }
+
+  static calculateDynamicFeeRate(
     blockTimestamp: BN,
     observationState: CpmmObservationState,
     feeType: FeeType,
@@ -153,7 +170,7 @@ export class DynamicFee {
     feeType: FeeType,
     baseFees: BN
   ): BN {
-    const dynamicFeeRate = this.calculateDynamicFee(blockTimestamp, observationState, feeType, baseFees)
+    const dynamicFeeRate = this.calculateDynamicFeeRate(blockTimestamp, observationState, feeType, baseFees)
     if (dynamicFeeRate.eqn(0)) {
       return postFeeAmount
     } else {

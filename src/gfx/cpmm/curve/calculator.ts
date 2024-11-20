@@ -37,6 +37,7 @@ export class CurveCalculator {
     observationState: CpmmObservationState
   ): SwapResult {
     const tradeFee = DynamicFee.calculateDynamicFee(
+      sourceAmount,
       new BN(new Date().getTime() / 1000),
       observationState,
       'volatility',
