@@ -341,6 +341,7 @@ export default class CpmmModule extends ModuleBase {
       mintA: mintAPubkey,
       mintB: mintBPubkey,
     });
+    const userLiquidityPda = getPdaUserLiquidity(new PublicKey(programId), new PublicKey(poolKeys.poolId), this.scope.ownerPubKey)
 
     txBuilder.addInstruction({
       instructions: [
@@ -350,12 +351,11 @@ export default class CpmmModule extends ModuleBase {
           new PublicKey(feeConfig.id),
           poolKeys.authority,
           poolKeys.poolId,
+          userLiquidityPda.publicKey,
           mintAPubkey,
           mintBPubkey,
-          poolKeys.lpMint,
           userVaultA,
           userVaultB,
-          getATAAddress(this.scope.ownerPubKey, poolKeys.lpMint).publicKey,
           poolKeys.vaultA,
           poolKeys.vaultB,
           poolFeeAccount,
