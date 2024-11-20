@@ -1,7 +1,7 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import { MintLayout, RawMint, TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, TransferFeeConfig } from "@solana/spl-token";
 import { Token, TokenAmount } from "@/module";
-import { BigNumberish } from "@/common/bignumber";
+import { BigNumberish } from "@/common/number";
 import { TokenInfo } from "./type";
 import { SOL_INFO, TOKEN_WSOL } from "./constant";
 

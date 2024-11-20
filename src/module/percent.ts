@@ -1,4 +1,5 @@
-import { Rounding } from "../common/bignumber";
+//import { Rounding } from "../common/bignumber";
+import { Rounding } from "../common/number";
 import BN from "bn.js";
 import { Fraction } from "./fraction";
 

@@ -1,7 +1,9 @@
 import _Big from "big.js";
 import BN from "bn.js";
 
-import { BigNumberish, BN_TEN, parseBigNumberish, Rounding } from "../common/bignumber";
+//import { BigNumberish, BN_TEN, parseBigNumberish, Rounding } from "../common/bignumber";
+import { BigNumberish, BN_TEN, parseBigNumberish, Rounding } from "../common/number";
+
 import { createLogger, Logger } from "../common/logger";
 
 import toFormat, { WrappedBig } from "./formatter";

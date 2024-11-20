@@ -1,7 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 
-import { BigNumberish } from "@/common/bignumber";
+import { BigNumberish } from "@/common/number";
 import { GetStructureSchema } from "@/marshmallow";
 
 import { splAccountLayout } from "./layout";
