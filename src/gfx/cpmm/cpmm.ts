@@ -1,9 +1,8 @@
 import { PublicKey } from "@solana/web3.js";
-import { NATIVE_MINT, TOKEN_PROGRAM_ID, AccountLayout, syncNative, createSyncNativeInstruction } from "@solana/spl-token";
+import { NATIVE_MINT, TOKEN_PROGRAM_ID, AccountLayout, createSyncNativeInstruction } from "@solana/spl-token";
 import { PoolInfo, PoolKeys, PoolStats } from "@/api/type";
 import { Percent } from "@/module";
 import { BN_ZERO } from "@/common/number";
-import { getATAAddress } from "@/common/pda";
 import { WSOLMint } from "@/common/pubKey";
 import { InstructionType, TxVersion } from "@/common/txTool/txType";
 import { MakeTxData } from "@/common/txTool/txTool";
@@ -719,10 +718,7 @@ export default class CpmmModule extends ModuleBase {
       });
 
     const inputMint = baseIn ? poolInfo.mintA.address : poolInfo.mintB.address
-    console.log("Input mint: ", inputMint);
-    console.log("wrapSol: ", wrapSol)
     if (wrapSol && inputMint === SOL_INFO.address) {
-      console.log("Wrapping SOL");
       txBuilder.addInstruction({
         instructions: [
           createSyncNativeInstruction(new PublicKey(baseIn ? mintATokenAcc! : mintBTokenAcc!))
