@@ -1,5 +1,5 @@
 export const API_URLS = {
-  BASE_HOST: "https://gamma-api.goosefx.io",
+  BASE_HOST: "https://gamma-api.goosefx.io/v1",
   /** id: string */
   CONFIG: "/config",
   /** ids: idList.join(',') */

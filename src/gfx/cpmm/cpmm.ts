@@ -1,5 +1,5 @@
 import { PublicKey } from "@solana/web3.js";
-import { NATIVE_MINT, TOKEN_PROGRAM_ID, AccountLayout } from "@solana/spl-token";
+import { NATIVE_MINT, TOKEN_PROGRAM_ID, AccountLayout, syncNative, createSyncNativeInstruction } from "@solana/spl-token";
 import { PoolInfo, PoolKeys, PoolStats } from "@/api/type";
 import { Percent } from "@/module";
 import { BN_ZERO } from "@/common/number";
@@ -32,11 +32,11 @@ import {
   makeSwapCpmmBaseOutInInstruction,
 } from "./instruction";
 import BN from "bn.js";
-import { CpmmPoolInfoLayout, CpmmConfigInfoLayout, CpmmUserPoolLiquidityLayout } from "./layout";
+import { CpmmPoolInfoLayout, CpmmConfigInfoLayout, CpmmUserPoolLiquidityLayout, CpmmObservationStateLayout } from "./layout";
 import Decimal from "decimal.js";
 import { fetchMultipleMintInfos, getMultipleAccountsInfoWithCustomFlags, getTransferAmountFeeV2 } from "@/common";
 import { GetTransferAmountFee, ReturnTypeFetchMultipleMintInfos } from "@/gfx/type";
-import { toGammaApiToken, toFeeConfig } from "../token";
+import { toGammaApiToken, toFeeConfig, SOL_INFO } from "../token";
 import { getPdaPoolAuthority } from "./pda";
 
 export default class CpmmModule extends ModuleBase {
@@ -259,7 +259,7 @@ export default class CpmmModule extends ModuleBase {
         mintB: mintB.address,
         openTime: rpcData.openTime.toString(),
         mintAVault: rpcData.vaultA.toBase58(),
-        mintBVault: rpcData.vaultA.toBase58(),
+        mintBVault: rpcData.vaultB.toBase58(),
         authority: getPdaPoolAuthority(rpcData.programId).publicKey.toBase58(),
         config: configInfo,
         mintAProgram: rpcData.mintProgramA.toBase58(),
@@ -481,7 +481,7 @@ export default class CpmmModule extends ModuleBase {
     if (!tokenAccountA && !tokenAccountB)
       this.logAndCreateError("cannot found target token accounts", "tokenAccounts", account.tokenAccounts);
     const userLiquidityPda = getPdaUserLiquidity(new PublicKey(poolInfo.programId), new PublicKey(poolInfo.id), this.scope.ownerPubKey)
-    const userLiquidity = await this.getRpcUserLiquidityAccounts([userLiquidityPda[0]]).then((a) => a[0])
+    const userLiquidity = await this.getRpcUserLiquidityAccounts([userLiquidityPda.publicKey]).then((a) => a[0])
     if (!userLiquidity) {
       txBuilder.addInstruction({
         instructions: [
@@ -489,7 +489,7 @@ export default class CpmmModule extends ModuleBase {
             new PublicKey(poolInfo.programId),
             this.scope.ownerPubKey,
             new PublicKey(poolInfo.id),
-            userLiquidityPda[0],
+            userLiquidityPda.publicKey,
           )
         ],
         instructionTypes: [InstructionType.CpmmInitUserLiquidity],
@@ -506,7 +506,7 @@ export default class CpmmModule extends ModuleBase {
           this.scope.ownerPubKey,
           new PublicKey(poolKeys.authority),
           new PublicKey(poolInfo.id),
-          userLiquidityPda[0],
+          userLiquidityPda.publicKey,
           tokenAccountA!,
           tokenAccountB!,
           new PublicKey(poolKeys.mintAVault),
@@ -523,6 +523,8 @@ export default class CpmmModule extends ModuleBase {
       lookupTableAddress: [],
     });
     txBuilder.addCustomComputeBudget(computeBudgetConfig);
+    const builder = txBuilder.versionBuild({ txVersion }) as Promise<MakeTxData<T>>;
+
     return txBuilder.versionBuild({ txVersion }) as Promise<MakeTxData<T>>;
   }
 
@@ -596,7 +598,7 @@ export default class CpmmModule extends ModuleBase {
 
 
     const userLiquidityPda = getPdaUserLiquidity(new PublicKey(poolInfo.programId), new PublicKey(poolInfo.id), this.scope.ownerPubKey)
-    const userLiquidity = await this.getRpcUserLiquidityAccounts([userLiquidityPda[0]]).then((a) => a[0])
+    const userLiquidity = await this.getRpcUserLiquidityAccounts([userLiquidityPda.publicKey]).then((a) => a[0])
 
     if (!userLiquidity)
       this.logAndCreateError("cannot found userLiquidityAccount");
@@ -607,7 +609,7 @@ export default class CpmmModule extends ModuleBase {
           this.scope.ownerPubKey,
           new PublicKey(poolKeys.authority),
           new PublicKey(poolInfo.id),
-          userLiquidityPda[0],
+          userLiquidityPda.publicKey,
           tokenAccountA!,
           tokenAccountB!,
           new PublicKey(poolKeys.mintAVault),
@@ -639,6 +641,7 @@ export default class CpmmModule extends ModuleBase {
       config,
       computeBudgetConfig,
       txVersion,
+      wrapSol
     } = params;
 
     const { bypassAssociatedCheck, checkCreateATAOwner, associatedOnly } = {
@@ -714,6 +717,18 @@ export default class CpmmModule extends ModuleBase {
         mintBUseSOLBalance,
         associatedOnly,
       });
+
+    const inputMint = baseIn ? poolInfo.mintA.address : poolInfo.mintB.address
+    console.log("Input mint: ", inputMint);
+    console.log("wrapSol: ", wrapSol)
+    if (wrapSol && inputMint === SOL_INFO.address) {
+      console.log("Wrapping SOL");
+      txBuilder.addInstruction({
+        instructions: [
+          createSyncNativeInstruction(new PublicKey(baseIn ? mintATokenAcc! : mintBTokenAcc!))
+        ],
+      })
+    }
 
     txBuilder.addInstruction({
       instructions: [
@@ -915,7 +930,7 @@ export default class CpmmModule extends ModuleBase {
   public async getRpcUserLiquidityAccounts(addresses: PublicKey[]): Promise<(UserLiquidityAccount | null)[]> {
     const accounts = await getMultipleAccountsInfoWithCustomFlags(
       this.scope.connection,
-      addresses.map((i) => ({ pubkey: i })),
+      addresses.map((i) => ({ pubkey: new PublicKey(i) }))
     );
 
     return accounts.map((acc) => {
@@ -923,6 +938,21 @@ export default class CpmmModule extends ModuleBase {
         return null
       } else {
         return CpmmUserPoolLiquidityLayout.decode(acc.accountInfo.data)
+      }
+    })
+  }
+
+  public async getObservationStates(addresses: PublicKey[]): Promise<(CpmmObservationState | null)[]> {
+    const accounts = await getMultipleAccountsInfoWithCustomFlags(
+      this.scope.connection,
+      addresses.map((i) => ({ pubkey: new PublicKey(i) }))
+    );
+
+    return accounts.map((acc) => {
+      if (acc.accountInfo === null) {
+        return null
+      } else {
+        return CpmmObservationStateLayout.decode(acc.accountInfo.data)
       }
     })
   }

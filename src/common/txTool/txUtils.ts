@@ -223,7 +223,7 @@ export async function simulateTransaction(
       );
     } catch (error) {
       if (error instanceof Error) {
-        logger.logWithError("failed to get info for multiple accounts", "RPC_ERROR", {
+        logger.logWithError("failed to simulate transaction", "RPC_ERROR", {
           message: error.message,
         });
       }
