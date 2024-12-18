@@ -51,6 +51,7 @@
     "buffer": "^6.0.3",
     "dayjs": "^1.11.5",
     "decimal.js-light": "^2.5.1",
+    "dotenv": "^16.4.7",
     "lodash": "^4.17.21",
     "toformat": "^2.0.0",
     "tsconfig-paths": "^4.2.0"

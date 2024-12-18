@@ -70,6 +70,8 @@ export interface CreateCpmmPoolParam<T> {
   mintAAmount: BN;
   mintBAmount: BN;
   startTime: BN;
+  maxTradeFeeRate: BN;
+  volatilityFactor: BN;
   feeConfig: ConfigInfo;
 
   associatedOnly: boolean;
@@ -98,6 +100,10 @@ export interface CreateCpmmPoolAddress {
   feeConfig: ConfigInfo;
 }
 
+export enum PartnerType {
+  AssetDash = 'AssetDash'
+}
+
 export interface AddCpmmLiquidityParams<T = TxVersion.LEGACY> {
   poolInfo: PoolInfo;
   poolKeys?: PoolKeys;
@@ -117,6 +123,7 @@ export interface AddCpmmLiquidityParams<T = TxVersion.LEGACY> {
     maxAnotherAmount: GetTransferAmountFee;
     liquidity: BN;
   };
+  partner?: PartnerType
 }
 
 export interface WithdrawCpmmLiquidityParams<T = TxVersion.LEGACY> {

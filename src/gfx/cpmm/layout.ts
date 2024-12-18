@@ -17,6 +17,13 @@ export const CpmmConfigInfoLayout = struct([
   seq(u64(), 11),
 ]);
 
+export const CpmmPartnerInfoLayout = struct([
+  u64("partnerId"),
+  u64("lpTokenLinkedWithPartner"),
+  u64("cumulativeFeeTotalTimesTvlShareTokenA"),
+  u64("cumulativeFeeTotalTimesTvlShareTokenB"),
+]);
+
 export const CpmmPoolInfoLayout = struct([
   blob(8),
 
@@ -34,7 +41,7 @@ export const CpmmPoolInfoLayout = struct([
 
   publicKey("observationId"),
 
-  u8("bump"),
+  u8("authBump"),
   u8("status"),
 
   u8("_padding2"),
@@ -52,16 +59,15 @@ export const CpmmPoolInfoLayout = struct([
   u128("cumulativeTradeFeesTokenB"),
   u128("cumulativeVolumeTokenA"),
   u128("cumulativeVolumeTokenB"),
-  u32("filterPeriod"),
-  u32("decayPeriod"),
-  u32("reductionFactor"),
-  u32("variableFeeControl"),
-  u64("volatilityV2BaseFee"),
-  u64("volatilityV2MaxFee"),
-  u64("volatilityV2VolatilityFactor"),
-  u64("volatilityV2ImbalanceFactor"),
-
-  seq(u64(), 17),
+  u64("latestDynamicFeeRate"),
+  u64("maxTradeFeeRate"),
+  u64("volatilityFactor"),
+  u64("tokenAVaultAmount"),
+  u64("tokenBVaultAmount"),
+  u64("maxSharedTokenA"),
+  u64("maxSharedTokenB"),
+  array(CpmmPartnerInfoLayout, 1, "partners"),
+  seq(u64(), 12),
 ]);
 
 export const ObservationLayout = struct([

@@ -146,9 +146,9 @@ export class Api {
     return res.data;
   }
 
-  async fetchPoolById(props: { ids: string }): Promise<PoolInfo[]> {
-    const { ids } = props;
-    const res = await this.api.get((this.urlConfigs.POOL_BY_IDS || API_URLS.POOL_BY_IDS) + `?ids=${ids}`);
+  async fetchPoolById(props: { idList: string[] }): Promise<PoolInfo[]> {
+    const { idList } = props;
+    const res = await this.api.get((this.urlConfigs.POOL_BY_IDS || API_URLS.POOL_BY_IDS) + `?ids=${idList.join(",")}`);
     return res.data;
   }
 
