@@ -1,20 +1,28 @@
-import { GfxCpmmClient } from '../src/gfx/index'
+import dotenv from 'dotenv'
+dotenv.config()
+import { GfxCpmmClient, PartnerType } from '../src/gfx/index'
 import fs from 'fs'
 import BN from "bn.js"
 
-import { Connection, Keypair, VersionedTransaction } from '@solana/web3.js'
+import { Connection, Keypair, PublicKey, VersionedTransaction } from '@solana/web3.js'
 import { TxVersion } from "@/common"
 import { Percent } from '@/module'
 import Decimal from 'decimal.js-light'
 
-const SOL = 'So11111111111111111111111111111111111111112'
-const SOL_USDC_POOL = 'Hjm1F98vgVdN7Y9L46KLqcZZWyTKS9tj9ybYKJcXnSng'
+const RPC_URL = process.env.RPC_URL!
+const SEND_RPC_URL = process.env.SEND_RPC_URL ?? RPC_URL
+const KEYPAIR_PATH = process.env.KEYPAIR_PATH!
+const AMOUNT = process.env.AMOUNT!
+const POOL_STATE = new PublicKey(process.env.POOL!)
+const MICRO_LAMPORTS = parseInt(process.env.DEFAULT_CU_LAMPORTS ?? '1200000')
+const SLIPPAGE_BPS = parseInt(process.env.SLIPPAGE_BPS ?? '1000')
+const BASE_IN = process.env.BASE_IN === undefined ? true : process.env.BASE_IN === 'true'
 
 async function mainFn(): Promise<void> {
-  const keypair = createKeypairFromFile("./keys.json")
+  const keypair = createKeypairFromFile(KEYPAIR_PATH)
   const client = await GfxCpmmClient.load(
     {
-      connection: new Connection(process.env.RPC_URL!),
+      connection: new Connection(RPC_URL),
       disableFeatureCheck: true,
       disableLoadToken: true,
       urlConfigs: {
@@ -24,18 +32,16 @@ async function mainFn(): Promise<void> {
     }
   )
 
-  const info = await client.cpmm.getPoolInfoFromRpc(SOL_USDC_POOL)
-  const amountIn = new BN(1000)
-  const slippage = new Percent(new BN(5), new BN(10))
-  const baseIn = info.poolInfo.mintA.address == SOL
+  const info = await client.cpmm.getPoolInfoFromRpc(POOL_STATE.toBase58())
+  const slippage = new Percent(new BN(SLIPPAGE_BPS), new BN(10000))
   const compute = client.cpmm.computePairAmount({
     poolInfo: info.poolInfo,
     baseReserve: info.rpcData.baseReserve,
     quoteReserve: info.rpcData.quoteReserve,
     slippage,
-    baseIn,
-    amount: new Decimal(amountIn.toString()).div(
-      10 ** (baseIn ? info.poolInfo.mintA.decimals : info.poolInfo.mintB.decimals),
+    baseIn: BASE_IN,
+    amount: new Decimal(AMOUNT.toString()).div(
+      10 ** (BASE_IN ? info.poolInfo.mintA.decimals : info.poolInfo.mintB.decimals),
     ).toString(),
     epochInfo: await client.connection.getEpochInfo()
   })
@@ -44,14 +50,15 @@ async function mainFn(): Promise<void> {
     poolInfo: info.poolInfo,
     poolKeys: info.poolKeys,
     payer: keypair.publicKey,
-    inputAmount: amountIn,
-    baseIn: info.poolInfo.mintA.address == SOL,
+    inputAmount: new BN(AMOUNT),
+    baseIn: BASE_IN,
     slippage,
     computeResult: compute,
     computeBudgetConfig: {
-      microLamports: 800000
+      microLamports: MICRO_LAMPORTS
     },
-    txVersion: TxVersion.V0
+    txVersion: TxVersion.V0,
+    partner: PartnerType.AssetDash
   })
 
   let latestBlockhash = await client.connection.getLatestBlockhash()
@@ -61,8 +68,9 @@ async function mainFn(): Promise<void> {
     secretKey: keypair.secretKey
   }])
 
+  const sendConnection = new Connection(SEND_RPC_URL)
   console.log("Sending addLiquidity transaction")
-  let signature = await client.connection.sendTransaction(
+  let signature = await sendConnection.sendTransaction(
     addTxn as unknown as VersionedTransaction,
     {
       skipPreflight: true,
@@ -88,7 +96,7 @@ async function mainFn(): Promise<void> {
     slippage,
     txVersion: TxVersion.V0,
     computeBudgetConfig: {
-      microLamports: 800000
+      microLamports: MICRO_LAMPORTS
     },
   }) 
   withdrawTxn.message.recentBlockhash = latestBlockhash.blockhash
@@ -98,7 +106,7 @@ async function mainFn(): Promise<void> {
   }])
 
   console.log("Sending removeLiquidity transaction")
-  signature = await client.connection.sendTransaction(
+  signature = await sendConnection.sendTransaction(
     withdrawTxn as unknown as VersionedTransaction,
     {
       skipPreflight: true,

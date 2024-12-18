@@ -1,19 +1,26 @@
+import dotenv from 'dotenv'
+dotenv.config()
 import { CurveCalculator, GfxCpmmClient } from '../src/gfx/index'
 import fs from 'fs'
 import BN from "bn.js"
 
-import { Connection, Keypair, VersionedTransaction } from '@solana/web3.js'
+import { Connection, Keypair, PublicKey, VersionedTransaction } from '@solana/web3.js'
 import { TxVersion } from "@/common"
 
-const SOL_MINT = 'So11111111111111111111111111111111111111112'
-const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
-const SOL_USDC_POOL = 'Hjm1F98vgVdN7Y9L46KLqcZZWyTKS9tj9ybYKJcXnSng'
+const RPC_URL = process.env.RPC_URL!
+const SEND_RPC_URL = process.env.SEND_RPC_URL ?? RPC_URL
+const KEYPAIR_PATH = process.env.KEYPAIR_PATH!
+const AMOUNT = new BN(parseInt(process.env.AMOUNT!))
+const POOL_STATE = new PublicKey(process.env.POOL!)
+const MICRO_LAMPORTS = parseInt(process.env.DEFAULT_CU_LAMPORTS ?? '1200000')
+const SLIPPAGE_BPS = parseInt(process.env.SLIPPAGE_BPS ?? '1000')
+const BASE_IN = process.env.BASE_IN === undefined ? true : process.env.BASE_IN === 'true'
 
 async function mainFn(): Promise<void> {
-  const keypair = createKeypairFromFile("./keys.json")
+  const keypair = createKeypairFromFile(KEYPAIR_PATH)
   const client = await GfxCpmmClient.load(
     {
-      connection: new Connection(process.env.RPC_URL!),
+      connection: new Connection(RPC_URL),
       disableFeatureCheck: true,
       disableLoadToken: true,
       urlConfigs: {
@@ -23,15 +30,13 @@ async function mainFn(): Promise<void> {
     }
   )
 
-  const amountIn = new BN(1000)
-  const info = await client.cpmm.getPoolInfoFromRpc(SOL_USDC_POOL)
-  const baseIn = info.poolInfo.mintA.address == SOL_MINT
+  const info = await client.cpmm.getPoolInfoFromRpc(POOL_STATE.toBase58())
   const observationState = await client.cpmm.getObservationStates([info.rpcData.observationId]).then((res) => res[0])
 
   const swapResult = CurveCalculator.swap(
-    amountIn,
-    baseIn ? info.rpcData.baseReserve : info.rpcData.quoteReserve,
-    baseIn ? info.rpcData.quoteReserve : info.rpcData.baseReserve,
+    AMOUNT,
+    BASE_IN ? info.rpcData.baseReserve : info.rpcData.quoteReserve,
+    BASE_IN ? info.rpcData.quoteReserve : info.rpcData.baseReserve,
     info.rpcData.configInfo!.tradeFeeRate,
     observationState!
   );
@@ -39,12 +44,12 @@ async function mainFn(): Promise<void> {
   const { transaction } = await client.cpmm.swap({
     poolInfo: info.poolInfo,
     poolKeys: info.poolKeys,
-    baseIn: info.poolInfo.mintA.address === USDC_MINT,
-    inputAmount: amountIn,
+    baseIn: BASE_IN,
+    inputAmount: AMOUNT,
     swapResult,
-    slippage: 0.5, // 50%,
+    slippage: SLIPPAGE_BPS / 10_000,
     computeBudgetConfig: {
-      microLamports: 6000000
+      microLamports: MICRO_LAMPORTS
     },
     txVersion: TxVersion.V0,
     wrapSol: true
@@ -58,7 +63,7 @@ async function mainFn(): Promise<void> {
   }])
 
   console.log("Sending swap transaction")
-  let signature = await client.connection.sendTransaction(
+  let signature = await new Connection(SEND_RPC_URL).sendTransaction(
     transaction as unknown as VersionedTransaction,
     {
       skipPreflight: true,

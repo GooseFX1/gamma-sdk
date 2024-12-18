@@ -4,7 +4,8 @@ import { AccountMeta, PublicKey, SystemProgram, TransactionInstruction } from "@
 import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { SYSTEM_PROGRAM_ID, RENT_PROGRAM_ID, MEMO_PROGRAM_ID2, createLogger } from "@/common";
 
-import { struct, u64 } from "@/marshmallow";
+import { struct, u64, option, publicKey, str } from "@/marshmallow";
+import { PartnerType } from "./type";
 const logger = createLogger("Gfx_cpmm");
 const anchorDataBuf = {
   initUserLiquidity: [227, 221, 200, 212, 36, 107, 149, 36],
@@ -20,7 +21,12 @@ export function makeInitUserPoolLiquidityInstruction(
   user: PublicKey,
   poolId: PublicKey,
   userPoolLiquidity: PublicKey,
+  partner: PartnerType | null
 ): TransactionInstruction {
+  const dataLayout = struct([
+    option(str(), 'partner')
+  ])
+
   const keys: Array<AccountMeta> = [
     { pubkey: user, isSigner: true, isWritable: true },
     { pubkey: poolId, isSigner: false, isWritable: true },
@@ -28,10 +34,18 @@ export function makeInitUserPoolLiquidityInstruction(
     { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
   ]
 
+  const data = Buffer.alloc(100)
+  dataLayout.encode(
+    {
+      partner
+    },
+    data
+  );
+
   return new TransactionInstruction({
     keys,
     programId,
-    data: Buffer.from([...anchorDataBuf.initUserLiquidity])
+    data: Buffer.from([...anchorDataBuf.initUserLiquidity, ...data.slice(0, dataLayout.getSpan(data))])
   })
 }
 
@@ -52,12 +66,13 @@ export function makeCreateCpmmPoolInInstruction(
   mintProgramA: PublicKey,
   mintProgramB: PublicKey,
   observationId: PublicKey,
-
   amountMaxA: BN,
   amountMaxB: BN,
   openTime: BN,
+  maxTradeFeeRate: BN,
+  volatilityFactor: BN,
 ): TransactionInstruction {
-  const dataLayout = struct([u64("amountMaxA"), u64("amountMaxB"), u64("openTime")]);
+  const dataLayout = struct([u64("amountMaxA"), u64("amountMaxB"), u64("openTime"), u64("maxTradeFeeRate"), u64("volatilityFactor")]);
 
   const keys: Array<AccountMeta> = [
     { pubkey: creator, isSigner: true, isWritable: false },
@@ -88,6 +103,8 @@ export function makeCreateCpmmPoolInInstruction(
       amountMaxA,
       amountMaxB,
       openTime,
+      maxTradeFeeRate,
+      volatilityFactor
     },
     data,
   );

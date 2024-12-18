@@ -273,6 +273,8 @@ export default class CpmmModule extends ModuleBase {
     programId,
     poolFeeAccount,
     startTime,
+    maxTradeFeeRate,
+    volatilityFactor,
     ownerInfo,
     associatedOnly = false,
     checkCreateATAOwner = false,
@@ -332,7 +334,7 @@ export default class CpmmModule extends ModuleBase {
       });
     txBuilder.addInstruction(userVaultBInstruction || {});
 
-    if (userVaultA === undefined || userVaultB === undefined) throw Error("you don't has some token account");
+    if (userVaultA === undefined || userVaultB === undefined) throw Error("One or both of user's token account does not exist");
 
     const poolKeys = getCreatePoolKeys({
       programId,
@@ -364,6 +366,8 @@ export default class CpmmModule extends ModuleBase {
           mintAAmount,
           mintBAmount,
           startTime,
+          maxTradeFeeRate,
+          volatilityFactor
         ),
       ],
       instructionTypes: [InstructionType.CpmmCreatePool],
@@ -390,6 +394,7 @@ export default class CpmmModule extends ModuleBase {
       computeBudgetConfig,
       config,
       txVersion,
+      partner
     } = params;
 
     // if (this.scope.availability.addStandardPosition === false)
@@ -489,6 +494,7 @@ export default class CpmmModule extends ModuleBase {
             this.scope.ownerPubKey,
             new PublicKey(poolInfo.id),
             userLiquidityPda.publicKey,
+            partner ? partner : null
           )
         ],
         instructionTypes: [InstructionType.CpmmInitUserLiquidity],
