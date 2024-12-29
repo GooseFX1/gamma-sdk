@@ -34,6 +34,9 @@ export function makeInitUserPoolLiquidityInstruction(
     { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
   ]
 
+  // `dataLayout.getSpan` returns -1 before the encoding, which causes an error during allocation. 
+  // we first allocate a buffer of 'random' length, after which we can perform the encoding and then
+  // get the correct span. The resulting buffer is truncated to match the span
   const data = Buffer.alloc(100)
   dataLayout.encode(
     {
