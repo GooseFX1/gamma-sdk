@@ -68,7 +68,6 @@ export default class CpmmModule extends ModuleBase {
     const poolInfos: { [poolId: string]: ReturnType<typeof CpmmPoolInfoLayout.decode> & { programId: PublicKey } } = {};
 
     const needFetchConfigId = new Set<string>();
-    const needFetchVaults: PublicKey[] = [];
 
     for (let i = 0; i < poolIds.length; i++) {
       const item = accounts[i];
@@ -79,8 +78,6 @@ export default class CpmmModule extends ModuleBase {
         programId: item.accountInfo.owner,
       };
       needFetchConfigId.add(String(rpc.configId));
-
-      needFetchVaults.push(rpc.vaultA, rpc.vaultB);
     }
 
     const configInfo: { [configId: string]: ReturnType<typeof CpmmConfigInfoLayout.decode> } = {};
@@ -99,31 +96,17 @@ export default class CpmmModule extends ModuleBase {
       }
     }
 
-    const vaultInfo: { [vaultId: string]: BN } = {};
-
-    const vaultAccountInfo = await getMultipleAccountsInfoWithCustomFlags(
-      this.scope.connection,
-      needFetchVaults.map((i) => ({ pubkey: new PublicKey(i) })),
-    );
-
-    for (let i = 0; i < needFetchVaults.length; i++) {
-      const vaultItemInfo = vaultAccountInfo[i].accountInfo;
-      if (vaultItemInfo === null) throw Error("fetch vault info error: " + needFetchVaults[i]);
-
-      vaultInfo[String(needFetchVaults[i])] = new BN(AccountLayout.decode(vaultItemInfo.data).amount.toString());
-    }
-
     const returnData: { [poolId: string]: CpmmRpcData } = {};
 
     for (const [id, info] of Object.entries(poolInfos)) {
-      const baseReserve = vaultInfo[info.vaultA.toString()].sub(info.protocolFeesMintA).sub(info.fundFeesMintA);
-      const quoteReserve = vaultInfo[info.vaultB.toString()].sub(info.protocolFeesMintB).sub(info.fundFeesMintB);
+      const baseReserve = info.tokenAVaultAmount
+      const quoteReserve = info.tokenBVaultAmount
       returnData[id] = {
         ...info,
-        baseReserve,
-        quoteReserve,
-        vaultAAmount: vaultInfo[info.vaultA.toString()],
-        vaultBAmount: vaultInfo[info.vaultB.toString()],
+        baseReserve: info.tokenAVaultAmount,
+        quoteReserve: info.tokenBVaultAmount,
+        vaultAAmount: info.tokenAVaultAmount.add(info.protocolFeesMintA).add(info.fundFeesMintA),
+        vaultBAmount: info.tokenBVaultAmount.add(info.protocolFeesMintB).add(info.fundFeesMintB),
         configInfo: configInfo[info.configId.toString()],
         poolPrice: new Decimal(quoteReserve.toString())
           .div(new Decimal(10).pow(info.mintDecimalB))
