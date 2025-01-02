@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/GooseFX1/gamma-sdk/compare/v1.0.0...v1.0.1) (2025-01-02)
+
+
+### Bug Fixes
+
+* adds nvmrc file ([d2e0c10](https://github.com/GooseFX1/gamma-sdk/commit/d2e0c1013fe644f2a36697296a3df9e5592cbc13))
+
 # 1.0.0 (2025-01-02)
 
 
