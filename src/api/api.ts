@@ -138,7 +138,7 @@ export class Api {
   }
 
   async getPoolList(props: FetchPoolParams = {}): Promise<PaginatedPoolInfos> {
-    const { poolType = 'all', sortBy = 'liquidity', sortOrder = 'desc', page = 0, pageSize = 100, search } = props;
+    const { poolType = 'all', sortBy = 'liquidity', sortOrder = 'desc', page = 1, pageSize = 100, search } = props;
     const res = await this.api.get(
       (this.urlConfigs.POOL_LIST || API_URLS.POOL_LIST) +
         `?poolType=${poolType}&sortOrder=${sortOrder}&sortBy=${sortBy}&page=${page}&pageSize=${pageSize}&search=${search}`,
@@ -219,33 +219,5 @@ export class Api {
   
     const res = await this.api.get(url);
     return res.data;
-  }  
-
-  // async fetchPoolByMints(
-  //   props: {
-  //     mint1: string | PublicKey;
-  //     mint2?: string | PublicKey;
-  //   } & Omit<FetchPoolParams, 'pageSize'>,
-  // ): Promise<PaginatedPoolInfos> {
-  //   const {
-  //     mint1: propMint1,
-  //     mint2: propMint2,
-  //     poolType = 'all',
-  //     sortBy = 'liquidity',
-  //     sortOrder = 'desc',
-  //     page = 1,
-  //   } = props;
-
-  //   const [mint1, mint2] = [
-  //     propMint1 ? solToWSol(propMint1).toBase58() : propMint1,
-  //     propMint2 && propMint2 !== "undefined" ? solToWSol(propMint2).toBase58() : "",
-  //   ];
-  //   const [baseMint, quoteMint] = mint2 && mint1 > mint2 ? [mint2, mint1] : [mint1, mint2];
-
-  //   const res = await this.api.get(
-  //     (this.urlConfigs.POOL_BY_MINTS || API_URLS.POOL_BY_MINTS) +
-  //       `?mint1=${baseMint}&mint2=${quoteMint}&poolType=${poolType}&sortBy=${sortBy}&sortOrder=${sortOrder}&pageSize=100&page=${page}`,
-  //   );
-  //   return res.data;
-  // }
+  } 
 }
