@@ -67,7 +67,12 @@ export const CpmmPoolInfoLayout = struct([
   u64("maxSharedTokenA"),
   u64("maxSharedTokenB"),
   array(CpmmPartnerInfoLayout, 1, "partners"),
-  seq(u64(), 12),
+  u64("tokenAAmountInKamino"),
+  u64("tokenBAmountInKamino"),
+  u64("withdrawnKaminoProfitToken0"),
+  u64("withdrawnKaminoProfitToken0"),
+
+  seq(u64(), 8),
 ]);
 
 export const ObservationLayout = struct([
