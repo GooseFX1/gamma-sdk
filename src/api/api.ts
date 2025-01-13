@@ -141,7 +141,7 @@ export class Api {
     const { poolType = 'all', sortBy = 'liquidity', sortOrder = 'desc', page = 1, pageSize = 100, search } = props;
     const res = await this.api.get(
       (this.urlConfigs.POOL_LIST || API_URLS.POOL_LIST) +
-        `?poolType=${poolType}&sortOrder=${sortOrder}&sortBy=${sortBy}&page=${page}&pageSize=${pageSize}&search=${search}`,
+        `?poolType=${poolType}&sortOrder=${sortOrder}&sortBy=${sortBy}&page=${page}&pageSize=${pageSize}${search ? `&search=${search}`: ''}`,
     );
     return res.data;
   }
