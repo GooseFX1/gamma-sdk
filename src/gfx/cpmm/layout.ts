@@ -1,4 +1,5 @@
 import { array, publicKey, seq, struct, u64, u8, u16, u32, u128, blob, bool } from "@/marshmallow";
+import { PartnerType } from "./type";
 
 export const CpmmConfigInfoLayout = struct([
   blob(8),
@@ -16,6 +17,10 @@ export const CpmmConfigInfoLayout = struct([
   u64("maxOpenTime"),
   seq(u64(), 11),
 ]);
+
+export const partnerNameToIdMap = {
+  [PartnerType.AssetDash]: 0,
+};
 
 export const CpmmPartnerInfoLayout = struct([
   u64("partnerId"),
@@ -78,7 +83,7 @@ export const CpmmPoolInfoLayout = struct([
 export const ObservationLayout = struct([
   u64("blockTimestamp"),
   u128("cumulativeToken0PriceX32"),
-  u128("cumulativeToken1PriceX32")
+  u128("cumulativeToken1PriceX32"),
 ]);
 
 export const CpmmObservationStateLayout = struct([
@@ -101,5 +106,5 @@ export const CpmmUserPoolLiquidityLayout = struct([
   u128("token0Withdrawn"),
   u128("token1Withdrawn"),
   u128("lpTokensOwned"),
-  publicKey("referrer")
+  publicKey("referrer"),
 ]);
