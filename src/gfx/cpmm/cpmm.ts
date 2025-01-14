@@ -789,19 +789,35 @@ export default class CpmmModule extends ModuleBase {
     executionPrice: Decimal;
     priceImpact: any;
   } {
-    const isBaseIn = outputMint.toString() === pool.mintB.address;
+    const tokenAToTokenB = outputMint.toString() === pool.mintB.address;
 
     const swapResult = CurveCalculator.swap(
       amountIn,
-      isBaseIn ? pool.baseReserve : pool.quoteReserve,
-      isBaseIn ? pool.quoteReserve : pool.baseReserve,
+      tokenAToTokenB ? pool.baseReserve : pool.quoteReserve,
+      tokenAToTokenB ? pool.quoteReserve : pool.baseReserve,
       pool.configInfo.tradeFeeRate,
       observationState
     );
 
-    const executionPrice = new Decimal(swapResult.destinationAmountSwapped.toString()).div(
-      swapResult.sourceAmountSwapped.toString(),
-    );
+    let afterSwapTokenA: Decimal;
+    let afterSwapTokenB: Decimal;
+    //Pool price is always tokenB/tokenA
+    if (tokenAToTokenB) {
+      afterSwapTokenA = new Decimal(swapResult.sourceAmountSwapped.toString()).div(
+        new Decimal(10).pow(pool.mintA.decimals),
+      );
+      afterSwapTokenB = new Decimal(swapResult.destinationAmountSwapped.toString()).div(
+        new Decimal(10).pow(pool.mintB.decimals),
+      );
+    } else {
+      afterSwapTokenA = new Decimal(swapResult.destinationAmountSwapped.toString()).div(
+        new Decimal(10).pow(pool.mintA.decimals),
+      );
+      afterSwapTokenB = new Decimal(swapResult.sourceAmountSwapped.toString()).div(
+        new Decimal(10).pow(pool.mintB.decimals),
+      );
+    }
+    const executionPrice = afterSwapTokenB.div(afterSwapTokenA);
 
     const minAmountOut = swapResult.destinationAmountSwapped.mul(new BN((1 - slippage) * 10000)).div(new BN(10000));
 
