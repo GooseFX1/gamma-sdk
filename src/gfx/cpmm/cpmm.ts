@@ -584,12 +584,14 @@ export default class CpmmModule extends ModuleBase {
     if (!tokenAccountA || !tokenAccountB)
       this.logAndCreateError("cannot found target token accounts", "tokenAccounts", account.tokenAccounts);
 
+    const userLiquidityPda = getPdaUserLiquidity(
+      new PublicKey(poolInfo.programId),
+      new PublicKey(poolInfo.id),
+      this.scope.ownerPubKey,
+    );
+    const userLiquidity = await this.getRpcUserLiquidityAccounts([userLiquidityPda.publicKey]).then((a) => a[0]);
 
-    const userLiquidityPda = getPdaUserLiquidity(new PublicKey(poolInfo.programId), new PublicKey(poolInfo.id), this.scope.ownerPubKey)
-    const userLiquidity = await this.getRpcUserLiquidityAccounts([userLiquidityPda.publicKey]).then((a) => a[0])
-
-    if (!userLiquidity)
-      this.logAndCreateError("cannot found userLiquidityAccount");
+    if (!userLiquidity) this.logAndCreateError("cannot found userLiquidityAccount");
     txBuilder.addInstruction({
       instructions: [
         makeWithdrawCpmmInInstruction(
@@ -736,6 +738,7 @@ export default class CpmmModule extends ModuleBase {
 
               inputAmount,
               swapResult.destinationAmountSwapped,
+              params.dflowSegmenterOptions,
             )
           : makeSwapCpmmBaseOutInInstruction(
               new PublicKey(poolInfo.programId),
@@ -758,6 +761,7 @@ export default class CpmmModule extends ModuleBase {
 
               swapResult.sourceAmountSwapped,
               swapResult.destinationAmountSwapped,
+              params.dflowSegmenterOptions,
             ),
       ],
       instructionTypes: [fixedOut ? InstructionType.CpmmSwapBaseOut : InstructionType.CpmmSwapBaseIn],

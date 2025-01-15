@@ -154,6 +154,10 @@ export interface CpmmSwapParams<T = TxVersion.LEGACY> {
   computeBudgetConfig?: ComputeBudgetConfig;
   txVersion?: T;
   wrapSol?: boolean;
+  dflowSegmenterOptions: {
+    registeredSegmenter: PublicKey;
+    registeredRegistry: PublicKey;
+  } | null;
 }
 
 export interface ComputePairAmountParams {
