@@ -107,7 +107,7 @@ export function makeCreateCpmmPoolInInstruction(
       amountMaxB,
       openTime,
       maxTradeFeeRate,
-      volatilityFactor
+      volatilityFactor,
     },
     data,
   );
@@ -243,6 +243,10 @@ export function makeSwapCpmmBaseInInInstruction(
 
   amountIn: BN,
   amounOutMin: BN,
+  dflowSegmenterOptions: {
+    registeredSegmenter: PublicKey;
+    registeredRegistry: PublicKey;
+  } | null = null,
 ): TransactionInstruction {
   const dataLayout = struct([u64("amountIn"), u64("amounOutMin")]);
 
@@ -261,6 +265,10 @@ export function makeSwapCpmmBaseInInInstruction(
     { pubkey: outputMint, isSigner: false, isWritable: false },
     { pubkey: observationId, isSigner: false, isWritable: true },
   ];
+  if (dflowSegmenterOptions) {
+    keys.push({ pubkey: dflowSegmenterOptions.registeredSegmenter, isSigner: true, isWritable: false });
+    keys.push({ pubkey: dflowSegmenterOptions.registeredRegistry, isSigner: false, isWritable: false });
+  }
 
   const data = Buffer.alloc(dataLayout.span);
   dataLayout.encode(
@@ -277,6 +285,7 @@ export function makeSwapCpmmBaseInInInstruction(
     data: Buffer.from([...anchorDataBuf.swapBaseInput, ...data]),
   });
 }
+
 export function makeSwapCpmmBaseOutInInstruction(
   programId: PublicKey,
   payer: PublicKey,
@@ -295,6 +304,10 @@ export function makeSwapCpmmBaseOutInInstruction(
 
   amountInMax: BN,
   amountOut: BN,
+  dflowSegmenterOptions: {
+    registeredSegmenter: PublicKey;
+    registeredRegistry: PublicKey;
+  } | null = null,
 ): TransactionInstruction {
   const dataLayout = struct([u64("amountInMax"), u64("amountOut")]);
 
@@ -313,6 +326,10 @@ export function makeSwapCpmmBaseOutInInstruction(
     { pubkey: outputMint, isSigner: false, isWritable: false },
     { pubkey: observationId, isSigner: false, isWritable: true },
   ];
+  if (dflowSegmenterOptions) {
+    keys.push({ pubkey: dflowSegmenterOptions.registeredSegmenter, isSigner: true, isWritable: false });
+    keys.push({ pubkey: dflowSegmenterOptions.registeredRegistry, isSigner: false, isWritable: false });
+  }
 
   const data = Buffer.alloc(dataLayout.span);
   dataLayout.encode(
