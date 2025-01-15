@@ -793,19 +793,27 @@ export default class CpmmModule extends ModuleBase {
     executionPrice: Decimal;
     priceImpact: any;
   } {
-    const isBaseIn = outputMint.toString() === pool.mintB.address;
+    const baseIn = outputMint.toString() === pool.mintB.address;
 
     const swapResult = CurveCalculator.swap(
       amountIn,
-      isBaseIn ? pool.baseReserve : pool.quoteReserve,
-      isBaseIn ? pool.quoteReserve : pool.baseReserve,
+      baseIn ? pool.baseReserve : pool.quoteReserve,
+      baseIn ? pool.quoteReserve : pool.baseReserve,
       pool.configInfo.tradeFeeRate,
       observationState
     );
 
-    const executionPrice = new Decimal(swapResult.destinationAmountSwapped.toString()).div(
-      swapResult.sourceAmountSwapped.toString(),
-    );
+    const currentPrice = baseIn ? pool.poolPrice : new Decimal(1).div(pool.poolPrice);
+    let executionPrice: Decimal;
+    if(baseIn){
+      executionPrice = new Decimal(swapResult.destinationAmountSwapped.toString()).div(
+        new Decimal(10).pow(pool.mintB.decimals)
+      ).div(swapResult.sourceAmountSwapped.toString()).div(new Decimal(10).pow(pool.mintA.decimals))
+    }else{
+      executionPrice = new Decimal(swapResult.destinationAmountSwapped.toString()).div(
+        new Decimal(10).pow(pool.mintA.decimals)
+      ).div(swapResult.sourceAmountSwapped.toString()).div(new Decimal(10).pow(pool.mintB.decimals))
+    }
 
     const minAmountOut = swapResult.destinationAmountSwapped.mul(new BN((1 - slippage) * 10000)).div(new BN(10000));
 
@@ -816,7 +824,7 @@ export default class CpmmModule extends ModuleBase {
       minAmountOut,
       executionPrice,
       fee: swapResult.tradeFee,
-      priceImpact: pool.poolPrice.sub(executionPrice).div(pool.poolPrice),
+      priceImpact: currentPrice.sub(executionPrice).div(currentPrice),
     };
   }
 
