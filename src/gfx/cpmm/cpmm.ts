@@ -584,12 +584,14 @@ export default class CpmmModule extends ModuleBase {
     if (!tokenAccountA || !tokenAccountB)
       this.logAndCreateError("cannot found target token accounts", "tokenAccounts", account.tokenAccounts);
 
+    const userLiquidityPda = getPdaUserLiquidity(
+      new PublicKey(poolInfo.programId),
+      new PublicKey(poolInfo.id),
+      this.scope.ownerPubKey,
+    );
+    const userLiquidity = await this.getRpcUserLiquidityAccounts([userLiquidityPda.publicKey]).then((a) => a[0]);
 
-    const userLiquidityPda = getPdaUserLiquidity(new PublicKey(poolInfo.programId), new PublicKey(poolInfo.id), this.scope.ownerPubKey)
-    const userLiquidity = await this.getRpcUserLiquidityAccounts([userLiquidityPda.publicKey]).then((a) => a[0])
-
-    if (!userLiquidity)
-      this.logAndCreateError("cannot found userLiquidityAccount");
+    if (!userLiquidity) this.logAndCreateError("cannot found userLiquidityAccount");
     txBuilder.addInstruction({
       instructions: [
         makeWithdrawCpmmInInstruction(
@@ -736,6 +738,7 @@ export default class CpmmModule extends ModuleBase {
 
               inputAmount,
               swapResult.destinationAmountSwapped,
+              params.dflowSegmenterOptions,
             )
           : makeSwapCpmmBaseOutInInstruction(
               new PublicKey(poolInfo.programId),
@@ -758,6 +761,7 @@ export default class CpmmModule extends ModuleBase {
 
               swapResult.sourceAmountSwapped,
               swapResult.destinationAmountSwapped,
+              params.dflowSegmenterOptions,
             ),
       ],
       instructionTypes: [fixedOut ? InstructionType.CpmmSwapBaseOut : InstructionType.CpmmSwapBaseIn],
@@ -789,19 +793,27 @@ export default class CpmmModule extends ModuleBase {
     executionPrice: Decimal;
     priceImpact: any;
   } {
-    const isBaseIn = outputMint.toString() === pool.mintB.address;
+    const baseIn = outputMint.toString() === pool.mintB.address;
 
     const swapResult = CurveCalculator.swap(
       amountIn,
-      isBaseIn ? pool.baseReserve : pool.quoteReserve,
-      isBaseIn ? pool.quoteReserve : pool.baseReserve,
+      baseIn ? pool.baseReserve : pool.quoteReserve,
+      baseIn ? pool.quoteReserve : pool.baseReserve,
       pool.configInfo.tradeFeeRate,
       observationState
     );
 
-    const executionPrice = new Decimal(swapResult.destinationAmountSwapped.toString()).div(
-      swapResult.sourceAmountSwapped.toString(),
-    );
+    const currentPrice = baseIn ? pool.poolPrice : new Decimal(1).div(pool.poolPrice);
+    let executionPrice: Decimal;
+    if(baseIn){
+      executionPrice = new Decimal(swapResult.destinationAmountSwapped.toString()).div(
+        new Decimal(10).pow(pool.mintB.decimals)
+      ).div(swapResult.sourceAmountSwapped.toString()).div(new Decimal(10).pow(pool.mintA.decimals))
+    }else{
+      executionPrice = new Decimal(swapResult.destinationAmountSwapped.toString()).div(
+        new Decimal(10).pow(pool.mintA.decimals)
+      ).div(swapResult.sourceAmountSwapped.toString()).div(new Decimal(10).pow(pool.mintB.decimals))
+    }
 
     const minAmountOut = swapResult.destinationAmountSwapped.mul(new BN((1 - slippage) * 10000)).div(new BN(10000));
 
@@ -812,7 +824,7 @@ export default class CpmmModule extends ModuleBase {
       minAmountOut,
       executionPrice,
       fee: swapResult.tradeFee,
-      priceImpact: pool.poolPrice.sub(executionPrice).div(pool.poolPrice),
+      priceImpact: currentPrice.sub(executionPrice).div(currentPrice),
     };
   }
 
