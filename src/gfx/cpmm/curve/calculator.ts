@@ -35,7 +35,7 @@ export class CurveCalculator {
     swapDestinationAmount: BN, 
     tradeFeeRate: BN, 
     observationState: CpmmObservationState,
-    _isInvokedWithSignedSegmenter = false,
+    isInvokedWithSignedSegmenter = false,
   ): SwapResult {
     const tradeFee = DynamicFee.calculateDynamicFee(
       sourceAmount,
@@ -43,7 +43,7 @@ export class CurveCalculator {
       observationState,
       "volatility",
       tradeFeeRate,
-      // TODO: make use of isInvokedWithSignedSegmenter for changing fee amount
+      isInvokedWithSignedSegmenter
     );
 
     const sourceAmountLessFees = sourceAmount.sub(tradeFee);
