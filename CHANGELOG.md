@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/GooseFX1/gamma-sdk/compare/v1.0.2...v1.1.0) (2025-01-17)
+
+
+### Features
+
+* use dflow isInvokedWithSignedSegmenter to reduce fee by 1BP ([d2022f3](https://github.com/GooseFX1/gamma-sdk/commit/d2022f37e0611650df32aed8fa108875d62bfbe0))
+
 ## [1.0.2](https://github.com/GooseFX1/gamma-sdk/compare/v1.0.1...v1.0.2) (2025-01-15)
 
 
