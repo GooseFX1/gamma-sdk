@@ -81,10 +81,12 @@ export class DynamicFee {
 
     const dynamicFee = new Decimal(baseFees.toString()).add(volatilityComponent)
     const finalFee = new BN(dynamicFee.lessThan(new Decimal(MAX_FEE.toString())) ? dynamicFee.toString() : MAX_FEE.toString());
-    if (isInvokedWithSignedSegmenter && finalFee.gt(new BN(10000))) {
-      finalFee.sub(ONE_BASIS_POINT)
+    if (isInvokedWithSignedSegmenter) {
+      const discountedFee = saturatingSub(finalFee, ONE_BASIS_POINT)
+      return baseFees.gt(discountedFee) ? baseFees : discountedFee
+    } else {
+      return finalFee;
     }
-    return finalFee;
   }
 
   static getPriceRange(
