@@ -154,7 +154,7 @@ export interface CpmmSwapParams<T = TxVersion.LEGACY> {
   computeBudgetConfig?: ComputeBudgetConfig;
   txVersion?: T;
   wrapSol?: boolean;
-  dflowSegmenterOptions: {
+  dflowSegmenterOptions?: {
     registeredSegmenter: PublicKey;
     registeredRegistry: PublicKey;
   } | null;
