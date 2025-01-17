@@ -27,7 +27,7 @@ export const API_URLS = {
   /** ids: idList.join(',') */
   POOL_KEYS_BY_IDS: "/pool/keys/ids",
   TOKEN_LIST: "/token-list",
-  JUP_TOKEN_LIST: "https://api.jup.ag/tokens/v1?tags=lst,community"
+  JUP_TOKEN_LIST: "https://tokens.jup.ag/tokens?tags=lst,community"
 };
 
 export const DEV_API_URLS = {
