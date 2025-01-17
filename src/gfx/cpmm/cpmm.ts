@@ -804,16 +804,14 @@ export default class CpmmModule extends ModuleBase {
     );
 
     const currentPrice = baseIn ? pool.poolPrice : new Decimal(1).div(pool.poolPrice);
-    let executionPrice: Decimal;
-    if(baseIn){
-      executionPrice = new Decimal(swapResult.destinationAmountSwapped.toString()).div(
-        new Decimal(10).pow(pool.mintB.decimals)
-      ).div(swapResult.sourceAmountSwapped.toString()).div(new Decimal(10).pow(pool.mintA.decimals))
-    }else{
-      executionPrice = new Decimal(swapResult.destinationAmountSwapped.toString()).div(
-        new Decimal(10).pow(pool.mintA.decimals)
-      ).div(swapResult.sourceAmountSwapped.toString()).div(new Decimal(10).pow(pool.mintB.decimals))
-    }
+    const [numDecimals, denomDecimals] = baseIn ? [pool.mintB.decimals, pool.mintA.decimals] : [pool.mintA.decimals, pool.mintB.decimals];
+    const numerator = new Decimal(swapResult.destinationAmountSwapped.toString()).div(
+      new Decimal(10).pow(numDecimals),
+    );
+    const denominator = new Decimal(swapResult.sourceAmountSwapped.toString()).div(
+      new Decimal(10).pow(denomDecimals),
+    );
+    const executionPrice = numerator.div(denominator);
 
     const minAmountOut = swapResult.destinationAmountSwapped.mul(new BN((1 - slippage) * 10000)).div(new BN(10000));
 

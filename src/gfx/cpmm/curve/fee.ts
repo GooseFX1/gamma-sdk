@@ -2,6 +2,7 @@ import BN from "bn.js";
 import { CpmmObservationState, CpmmObservation } from "../type";
 import Decimal from "decimal.js-light";
 
+export const ONE_BASIS_POINT = new BN(100);
 export const FEE_RATE_DENOMINATOR_VALUE = new BN(1_000_000);
 const OBSERVATION_LEN = 100;
 // Volatility-based fee constants
@@ -25,13 +26,15 @@ export class DynamicFee {
     blockTimestamp: BN,
     observationState: CpmmObservationState,
     feeType: FeeType,
-    baseFees: BN
+    baseFees: BN,
+    isInvokedWithSignedSegmenter: boolean
   ): BN {
     let feeRate = this.calculateDynamicFeeRate(
       blockTimestamp,
       observationState,
       feeType,
-      baseFees
+      baseFees,
+      isInvokedWithSignedSegmenter
     )
 
     return (amount.mul(feeRate).add(FEE_RATE_DENOMINATOR_VALUE).subn(1)).div(FEE_RATE_DENOMINATOR_VALUE)
@@ -41,11 +44,12 @@ export class DynamicFee {
     blockTimestamp: BN,
     observationState: CpmmObservationState,
     feeType: FeeType,
-    baseFees: BN
+    baseFees: BN,
+    isInvokedWithSignedSegmenter: boolean
   ): BN {
     switch(feeType) {
       case 'volatility': {
-        return this.calculateVolatileFee(blockTimestamp, observationState, baseFees)
+        return this.calculateVolatileFee(blockTimestamp, observationState, baseFees, isInvokedWithSignedSegmenter)
       }
     }
   }
@@ -53,7 +57,8 @@ export class DynamicFee {
   static calculateVolatileFee(
     blockTimestamp: BN,
     observationState: CpmmObservationState,
-    baseFees: BN
+    baseFees: BN,
+    isInvokedWithSignedSegmenter: boolean
   ): BN {
     const { minPrice, maxPrice, twapPrice } = this.getPriceRange(observationState, blockTimestamp, VOLATILITY_WINDOW)
     if (minPrice.eqn(0) || maxPrice.eqn(0) || twapPrice.eqn(0) || twapPrice.eqn(1)) {
@@ -75,7 +80,13 @@ export class DynamicFee {
     const volatilityComponent = new Decimal(VOLATILITY_FACTOR.toString()).mul(volatility)
 
     const dynamicFee = new Decimal(baseFees.toString()).add(volatilityComponent)
-    return new BN(dynamicFee.lessThan(new Decimal(MAX_FEE.toString())) ? dynamicFee.toString() : MAX_FEE.toString())
+    const finalFee = new BN(dynamicFee.lessThan(new Decimal(MAX_FEE.toString())) ? dynamicFee.toString() : MAX_FEE.toString());
+    if (isInvokedWithSignedSegmenter) {
+      const discountedFee = saturatingSub(finalFee, ONE_BASIS_POINT)
+      return baseFees.gt(discountedFee) ? baseFees : discountedFee
+    } else {
+      return finalFee;
+    }
   }
 
   static getPriceRange(
@@ -168,9 +179,10 @@ export class DynamicFee {
     postFeeAmount: BN,
     observationState: CpmmObservationState,
     feeType: FeeType,
-    baseFees: BN
+    baseFees: BN,
+    isInvokedWithSignedSegmenter: boolean
   ): BN {
-    const dynamicFeeRate = this.calculateDynamicFeeRate(blockTimestamp, observationState, feeType, baseFees)
+    const dynamicFeeRate = this.calculateDynamicFeeRate(blockTimestamp, observationState, feeType, baseFees, isInvokedWithSignedSegmenter)
     if (dynamicFeeRate.eqn(0)) {
       return postFeeAmount
     } else {
