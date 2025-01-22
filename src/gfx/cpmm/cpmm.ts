@@ -739,6 +739,7 @@ export default class CpmmModule extends ModuleBase {
               inputAmount,
               swapResult.destinationAmountSwapped,
               params.dflowSegmenterOptions,
+              params.referralAccounts,
             )
           : makeSwapCpmmBaseOutInInstruction(
               new PublicKey(poolInfo.programId),
@@ -762,6 +763,7 @@ export default class CpmmModule extends ModuleBase {
               swapResult.sourceAmountSwapped,
               swapResult.destinationAmountSwapped,
               params.dflowSegmenterOptions,
+              params.referralAccounts,
             ),
       ],
       instructionTypes: [fixedOut ? InstructionType.CpmmSwapBaseOut : InstructionType.CpmmSwapBaseIn],

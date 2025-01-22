@@ -4,7 +4,7 @@ import { AccountMeta, PublicKey, SystemProgram, TransactionInstruction } from "@
 import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { SYSTEM_PROGRAM_ID, RENT_PROGRAM_ID, MEMO_PROGRAM_ID2, createLogger } from "@/common";
 
-import { struct, u64, option, publicKey, str } from "@/marshmallow";
+import { struct, u64, option, str } from "@/marshmallow";
 import { PartnerType } from "./type";
 const logger = createLogger("Gfx_cpmm");
 const anchorDataBuf = {
@@ -247,6 +247,10 @@ export function makeSwapCpmmBaseInInInstruction(
     registeredSegmenter: PublicKey;
     registeredRegistry: PublicKey;
   } | null = null,
+  referralAccounts: {
+    referralAccount: PublicKey;
+    referralTokenAccountWithInputMint: PublicKey;
+  } | null = null,
 ): TransactionInstruction {
   const dataLayout = struct([u64("amountIn"), u64("amounOutMin")]);
 
@@ -268,6 +272,19 @@ export function makeSwapCpmmBaseInInInstruction(
   if (dflowSegmenterOptions) {
     keys.push({ pubkey: dflowSegmenterOptions.registeredSegmenter, isSigner: true, isWritable: false });
     keys.push({ pubkey: dflowSegmenterOptions.registeredRegistry, isSigner: false, isWritable: false });
+  }
+
+  if (referralAccounts) {
+    if (!dflowSegmenterOptions) {
+      // We pass programId as then the program will interpret them as None, i.e not passed
+      // The smart contract requires the accounts to be in specific order by doing this we still follow the order but
+      // the program will interpret them as not passed
+      keys.push({ pubkey: programId, isSigner: false, isWritable: false });
+      keys.push({ pubkey: programId, isSigner: false, isWritable: false });
+    }
+
+    keys.push({ pubkey: referralAccounts.referralAccount, isSigner: false, isWritable: false });
+    keys.push({ pubkey: referralAccounts.referralTokenAccountWithInputMint, isSigner: false, isWritable: true });
   }
 
   const data = Buffer.alloc(dataLayout.span);
@@ -308,6 +325,10 @@ export function makeSwapCpmmBaseOutInInstruction(
     registeredSegmenter: PublicKey;
     registeredRegistry: PublicKey;
   } | null = null,
+  referralAccounts: {
+    referralAccount: PublicKey;
+    referralTokenAccountWithInputMint: PublicKey;
+  } | null = null,
 ): TransactionInstruction {
   const dataLayout = struct([u64("amountInMax"), u64("amountOut")]);
 
@@ -329,6 +350,19 @@ export function makeSwapCpmmBaseOutInInstruction(
   if (dflowSegmenterOptions) {
     keys.push({ pubkey: dflowSegmenterOptions.registeredSegmenter, isSigner: true, isWritable: false });
     keys.push({ pubkey: dflowSegmenterOptions.registeredRegistry, isSigner: false, isWritable: false });
+  }
+
+  if (referralAccounts) {
+    if (!dflowSegmenterOptions) {
+      // We pass programId as then the program will interpret them as None, i.e not passed
+      // The smart contract requires the accounts to be in specific order by doing this we still follow the order but
+      // the program will interpret them as not passed
+      keys.push({ pubkey: programId, isSigner: false, isWritable: false });
+      keys.push({ pubkey: programId, isSigner: false, isWritable: false });
+    }
+
+    keys.push({ pubkey: referralAccounts.referralAccount, isSigner: false, isWritable: false });
+    keys.push({ pubkey: referralAccounts.referralTokenAccountWithInputMint, isSigner: false, isWritable: true });
   }
 
   const data = Buffer.alloc(dataLayout.span);

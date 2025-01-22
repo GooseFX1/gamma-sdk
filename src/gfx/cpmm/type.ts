@@ -158,6 +158,10 @@ export interface CpmmSwapParams<T = TxVersion.LEGACY> {
     registeredSegmenter: PublicKey;
     registeredRegistry: PublicKey;
   } | null;
+  referralAccounts?: {
+    referralAccount: PublicKey;
+    referralTokenAccountWithInputMint: PublicKey;
+  } | null,
 }
 
 export interface ComputePairAmountParams {
