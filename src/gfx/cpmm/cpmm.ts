@@ -78,8 +78,6 @@ export default class CpmmModule extends ModuleBase {
     );
     const poolInfos: { [poolId: string]: ReturnType<typeof CpmmPoolInfoLayout.decode> & { programId: PublicKey } } = {};
 
-    const needFetchConfigId = new Set<string>();
-
     for (let i = 0; i < poolIds.length; i++) {
       const item = accounts[i];
       if (item.accountInfo === null) throw Error("fetch pool info error: " + String(poolIds[i]));
@@ -88,7 +86,6 @@ export default class CpmmModule extends ModuleBase {
         ...rpc,
         programId: item.accountInfo.owner,
       };
-      needFetchConfigId.add(String(rpc.configId));
     }
 
     const returnData: {
@@ -100,21 +97,32 @@ export default class CpmmModule extends ModuleBase {
 
     for (const [id, info] of Object.entries(poolInfos)) {
       const poolInfo = info as ReturnType<typeof CpmmPoolInfoLayout.decode> & { programId: PublicKey };
-      const totalLpByPartner = poolInfo.partners[partnerNameToIdMap[partnerType]].lpTokenLinkedWithPartner;
-      const lpToTradingToken = ConstantProductCurve.lpTokensToTradingTokens(
-        totalLpByPartner,
-        poolInfo.lpSupply,
-        poolInfo.tokenAVaultAmount,
-        poolInfo.tokenBVaultAmount,
-        RoundDirection.Floor,
-      );
+      const { token0, token1 } = await this.getTokenInvestedByPartner(poolInfo, partnerType);
       returnData[id] = {
-        totalInvestedThoughPartnerToken0: lpToTradingToken.tokenAmount0,
-        totalInvestedThoughPartnerToken1: lpToTradingToken.tokenAmount1,
+        totalInvestedThoughPartnerToken0: token0,
+        totalInvestedThoughPartnerToken1: token1,
       };
     }
 
     return returnData;
+  }
+
+  public async getTokenInvestedByPartner(
+    poolInfo: ReturnType<typeof CpmmPoolInfoLayout.decode> & { programId: PublicKey },
+    partnerType: PartnerType,
+  ): Promise<{ token0: BN; token1: BN }> {
+    const lpTokenLinkedWithPartner = poolInfo.partners[partnerNameToIdMap[partnerType]].lpTokenLinkedWithPartner;
+    const lpToTradingToken = ConstantProductCurve.lpTokensToTradingTokens(
+      lpTokenLinkedWithPartner,
+      poolInfo.lpSupply,
+      poolInfo.tokenAVaultAmount,
+      poolInfo.tokenBVaultAmount,
+      RoundDirection.Floor,
+    );
+    return {
+      token0: lpToTradingToken.tokenAmount0,
+      token1: lpToTradingToken.tokenAmount1,
+    };
   }
 
   public async getRpcPoolInfos(
