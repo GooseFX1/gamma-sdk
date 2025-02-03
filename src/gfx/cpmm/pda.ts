@@ -77,7 +77,7 @@ export function getPdaUserLiquidity(
   publicKey: PublicKey;
   nonce: number;
 } {
-  return findProgramAddress([USER_POOL_LIQUIDITY_SEED, poolId.toBuffer(), owner.toBuffer()], programId)
+  return findProgramAddress([USER_POOL_LIQUIDITY_SEED, poolId.toBuffer(), owner.toBuffer()], programId);
 }
 
 function u16ToBytes(num: number): Uint8Array {

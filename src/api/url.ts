@@ -7,7 +7,7 @@ export const API_URLS = {
   /**
    * poolType?: { 'hyper' | 'primary' | 'all' }. defaults to 'all'
    * sortOrder?: { 'asc' | 'desc' }. defaults to 'desc'
-   * sortBy?: { 'liquidity' | 'volume_24h' / 7d / 30d | 'fee_24h' / 7d / 30d | 'apr_24h' / 7d / 30d }. 
+   * sortBy?: { 'liquidity' | 'volume_24h' / 7d / 30d | 'fee_24h' / 7d / 30d | 'apr_24h' / 7d / 30d }.
    * pageSize?. { number } defaults to 200
    * page?: { number } defaults to 1
    * search: { string | undefined }
@@ -15,10 +15,10 @@ export const API_URLS = {
    * mint2?: string
    */
   POOL_BY_MINTS: "/pool/info/mints",
-   /**
+  /**
    * poolType?: { 'hyper' | 'primary' | 'all' }. defaults to 'all'
    * sortOrder?: { 'asc' | 'desc' }. defaults to 'desc'
-   * sortBy?: { 'liquidity' | 'volume_24h' / 7d / 30d | 'fee_24h' / 7d / 30d | 'apr_24h' / 7d / 30d }. 
+   * sortBy?: { 'liquidity' | 'volume_24h' / 7d / 30d | 'fee_24h' / 7d / 30d | 'apr_24h' / 7d / 30d }.
    * pageSize?. { number } defaults to 200
    * page?: { number } defaults to 1
    * search: { string | undefined }
@@ -27,7 +27,7 @@ export const API_URLS = {
   /** ids: idList.join(',') */
   POOL_KEYS_BY_IDS: "/pool/keys/ids",
   TOKEN_LIST: "/token-list",
-  JUP_TOKEN_LIST: "https://tokens.jup.ag/tokens?tags=lst,community"
+  JUP_TOKEN_LIST: "https://tokens.jup.ag/tokens?tags=lst,community",
 };
 
 export const DEV_API_URLS = {
