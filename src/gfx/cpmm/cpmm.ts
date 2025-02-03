@@ -1,6 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 import { NATIVE_MINT, TOKEN_PROGRAM_ID, createSyncNativeInstruction } from "@solana/spl-token";
-import { PoolInfo, PoolKeys, PoolStats } from "@/api/type";
+import { GammaToken, PoolInfo, PoolKeys, PoolStats } from "@/api/type";
 import { Percent } from "@/module";
 import { BN_ZERO } from "@/common/number";
 import { WSOLMint } from "@/common/pubKey";

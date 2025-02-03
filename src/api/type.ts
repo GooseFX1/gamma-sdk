@@ -37,11 +37,11 @@ export type PoolKeys = {
   mintBProgram: string;
 }
 
-export type PoolInfo = {
+type BasePoolInfo<T extends GammaToken> = {
   programId: string;
   id: string;
-  mintA: GammaToken;
-  mintB: GammaToken;
+  mintA: T;
+  mintB: T;
   openTime: string;
   mintAVault: string;
   mintBVault: string;
@@ -61,6 +61,9 @@ export type PoolInfo = {
   }
 }
 
+export type PoolInfo = BasePoolInfo<GammaToken>
+export type ApiPoolInfo = BasePoolInfo<GammaApiToken>
+
 export type PoolStats = {
   range: '24H' | '7D' | '30D';
   feesUSD: number;
@@ -76,7 +79,7 @@ export type PaginatedPoolInfos = {
   totalPages: number;
   totalItems: number;
   count: number;
-  pools: PoolInfo[];
+  pools: ApiPoolInfo[];
 }
 
 export enum PoolFetchTypeEnum {
@@ -91,12 +94,24 @@ export type GammaToken = {
   symbol: string
   decimals: number
   logoURI: string
-  tags: string[]
-  // dailyVolume: number | null
-  // freezeAuthority: string | null
-  // mintAuthority: string | null
-  // price: number
+  tags?: string[]
   extensions?: ExtensionsItem | null
+}
+
+export type GammaApiToken = {
+  address: string
+  name: string
+  symbol: string
+  decimals: number
+  logoURI: string
+  dailyVolume: number | null
+  freezeAuthority: string | null
+  mintAuthority: string | null
+  extensions: ExtensionsItem | null
+  cumulativeTradeFees: string | null
+  withdrawnKaminoProfit: string | null
+  protocolFees: string | null
+  fundFees: string | null
 }
 
 export type JupiterListToken = {
@@ -106,13 +121,7 @@ export type JupiterListToken = {
   decimals: number
   logoURI: string
   tags: string[] // "hasFreeze" | "hasTransferFee" | "token-2022" | "community" | "unknown" ..etc
-  // daily_volume: number | null
-  // freeze_authority: string | null
-  // mint_authority: string | null
-  // minted_at: string
-  // created_at: string
-  // permanent_delegate: string | null
-  extensions: ExtensionsItem;
+  extensions: ExtensionsItem
 };
 
 type ExtensionsItem = {

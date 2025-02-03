@@ -11,6 +11,8 @@ import {
   GammaToken,
   FetchPoolParams,
   JupiterListToken,
+  GammaApiToken,
+  ApiPoolInfo,
 } from "./type";
 import { API_URLS, API_URL_CONFIG } from "./url";
 import { updateReqHistory } from "./utils";
@@ -146,7 +148,7 @@ export class Api {
     return res.data;
   }
 
-  async fetchPoolById(props: { idList: string[] }): Promise<PoolInfo[]> {
+  async fetchPoolById(props: { idList: string[] }): Promise<ApiPoolInfo[]> {
     const { idList } = props;
     const res = await this.api.get((this.urlConfigs.POOL_BY_IDS || API_URLS.POOL_BY_IDS) + `?ids=${idList.join(",")}`);
     return res.data;
