@@ -25,6 +25,7 @@
   },
   "scripts": {
     "lint": "eslint src/**/*.ts",
+    "format": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "test": "jest",
     "build-docs": "typedoc",
     "build-docs-watch": "typedoc --watch",

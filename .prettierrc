@@ -1,7 +1,6 @@
 {
   "arrowParens": "always",
   "bracketSpacing": true,
-  "eslintIntegration": true,
   "overrides": [
     {
       "files": ".prettierrc",
