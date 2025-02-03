@@ -142,8 +142,7 @@ export class GfxCpmmClient {
       api,
     });
 
-    if (!config.disableLoadToken)
-      await client.token.load({});
+    if (!config.disableLoadToken) await client.token.load({});
 
     return client;
   }

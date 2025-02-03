@@ -16,9 +16,9 @@ type PriceRange = {
   minPrice: BN;
   maxPrice: BN;
   twapPrice: BN;
-}
+};
 
-type FeeType = 'volatility'
+type FeeType = "volatility";
 
 export class DynamicFee {
   static calculateDynamicFee(
@@ -27,17 +27,17 @@ export class DynamicFee {
     observationState: CpmmObservationState,
     feeType: FeeType,
     baseFees: BN,
-    isInvokedWithSignedSegmenter: boolean
+    isInvokedWithSignedSegmenter: boolean,
   ): BN {
     let feeRate = this.calculateDynamicFeeRate(
       blockTimestamp,
       observationState,
       feeType,
       baseFees,
-      isInvokedWithSignedSegmenter
-    )
+      isInvokedWithSignedSegmenter,
+    );
 
-    return (amount.mul(feeRate).add(FEE_RATE_DENOMINATOR_VALUE).subn(1)).div(FEE_RATE_DENOMINATOR_VALUE)
+    return amount.mul(feeRate).add(FEE_RATE_DENOMINATOR_VALUE).subn(1).div(FEE_RATE_DENOMINATOR_VALUE);
   }
 
   static calculateDynamicFeeRate(
@@ -45,11 +45,11 @@ export class DynamicFee {
     observationState: CpmmObservationState,
     feeType: FeeType,
     baseFees: BN,
-    isInvokedWithSignedSegmenter: boolean
+    isInvokedWithSignedSegmenter: boolean,
   ): BN {
-    switch(feeType) {
-      case 'volatility': {
-        return this.calculateVolatileFee(blockTimestamp, observationState, baseFees, isInvokedWithSignedSegmenter)
+    switch (feeType) {
+      case "volatility": {
+        return this.calculateVolatileFee(blockTimestamp, observationState, baseFees, isInvokedWithSignedSegmenter);
       }
     }
   }
@@ -58,120 +58,120 @@ export class DynamicFee {
     blockTimestamp: BN,
     observationState: CpmmObservationState,
     baseFees: BN,
-    isInvokedWithSignedSegmenter: boolean
+    isInvokedWithSignedSegmenter: boolean,
   ): BN {
-    const { minPrice, maxPrice, twapPrice } = this.getPriceRange(observationState, blockTimestamp, VOLATILITY_WINDOW)
+    const { minPrice, maxPrice, twapPrice } = this.getPriceRange(observationState, blockTimestamp, VOLATILITY_WINDOW);
     if (minPrice.eqn(0) || maxPrice.eqn(0) || twapPrice.eqn(0) || twapPrice.eqn(1)) {
-      return baseFees
+      return baseFees;
     }
 
-    const logMaxPrice = new Decimal(maxPrice.toString()).ln()
-    const logMinPrice = new Decimal(minPrice.toString()).ln()
-    const logTwapPrice = new Decimal(twapPrice.toString()).ln()
+    const logMaxPrice = new Decimal(maxPrice.toString()).ln();
+    const logMinPrice = new Decimal(minPrice.toString()).ln();
+    const logTwapPrice = new Decimal(twapPrice.toString()).ln();
 
-    const numerator = logMaxPrice.sub(logMinPrice)
-    const denominator = logTwapPrice.abs()
+    const numerator = logMaxPrice.sub(logMinPrice);
+    const denominator = logTwapPrice.abs();
 
     if (denominator.eq(0)) {
-      return baseFees
+      return baseFees;
     }
 
-    const volatility = numerator.div(denominator)
-    const volatilityComponent = new Decimal(VOLATILITY_FACTOR.toString()).mul(volatility)
+    const volatility = numerator.div(denominator);
+    const volatilityComponent = new Decimal(VOLATILITY_FACTOR.toString()).mul(volatility);
 
-    const dynamicFee = new Decimal(baseFees.toString()).add(volatilityComponent)
-    const finalFee = new BN(dynamicFee.lessThan(new Decimal(MAX_FEE.toString())) ? dynamicFee.toString() : MAX_FEE.toString());
+    const dynamicFee = new Decimal(baseFees.toString()).add(volatilityComponent);
+    const finalFee = new BN(
+      dynamicFee.lessThan(new Decimal(MAX_FEE.toString())) ? dynamicFee.toString() : MAX_FEE.toString(),
+    );
     if (isInvokedWithSignedSegmenter) {
-      const discountedFee = saturatingSub(finalFee, ONE_BASIS_POINT)
-      return baseFees.gt(discountedFee) ? baseFees : discountedFee
+      const discountedFee = saturatingSub(finalFee, ONE_BASIS_POINT);
+      return baseFees.gt(discountedFee) ? baseFees : discountedFee;
     } else {
       return finalFee;
     }
   }
 
-  static getPriceRange(
-    observationState: CpmmObservationState,
-    currentTime: BN,
-    window: BN
-  ): PriceRange {
-    let minPrice = new BN(1).ushln(128).subn(1)
-    let maxPrice = new BN(0)
+  static getPriceRange(observationState: CpmmObservationState, currentTime: BN, window: BN): PriceRange {
+    let minPrice = new BN(1).ushln(128).subn(1);
+    let maxPrice = new BN(0);
 
     let descendingObservations = observationState.observations
-      .map((observation, idx) => ({observation, idx}))
+      .map((observation, idx) => ({ observation, idx }))
       .filter(({ observation }) => {
-        observation.blockTimestamp.eqn(0) 
-          && !observation.cumulativeToken0PriceX32.eqn(0)
-          && !observation.cumulativeToken1PriceX32.eqn(0)
-          && currentTime.sub(observation.blockTimestamp) <= window
+        observation.blockTimestamp.eqn(0) &&
+          !observation.cumulativeToken0PriceX32.eqn(0) &&
+          !observation.cumulativeToken1PriceX32.eqn(0) &&
+          currentTime.sub(observation.blockTimestamp) <= window;
       })
-      .map(({observation, idx}) => {
+      .map(({ observation, idx }) => {
         return {
           index: idx,
-          observation
-        }
-      })
+          observation,
+        };
+      });
 
     if (descendingObservations.length < 2) {
       return {
         minPrice: new BN(0),
         maxPrice: new BN(0),
         twapPrice: new BN(0),
-      }
+      };
     }
 
-    descendingObservations.sort((a, b) => b.observation.blockTimestamp.cmp(a.observation.blockTimestamp))
+    descendingObservations.sort((a, b) => b.observation.blockTimestamp.cmp(a.observation.blockTimestamp));
 
-    const newestObs = descendingObservations[0]
-    const oldestObs = descendingObservations[descendingObservations.length - 1]
+    const newestObs = descendingObservations[0];
+    const oldestObs = descendingObservations[descendingObservations.length - 1];
 
-    const totalTimeDelta = saturatingSub(newestObs.observation.blockTimestamp, oldestObs.observation.blockTimestamp)
+    const totalTimeDelta = saturatingSub(newestObs.observation.blockTimestamp, oldestObs.observation.blockTimestamp);
     if (totalTimeDelta.eqn(0)) {
       return {
         minPrice: new BN(0),
         maxPrice: new BN(0),
         twapPrice: new BN(0),
-      }
+      };
     }
 
     const twapPrice = newestObs.observation.cumulativeToken0PriceX32
       .sub(oldestObs.observation.cumulativeToken0PriceX32)
-      .div(totalTimeDelta)
+      .div(totalTimeDelta);
 
     for (const indexedObservation of descendingObservations) {
-      let lastObservation: CpmmObservation
+      let lastObservation: CpmmObservation;
       if (indexedObservation.index == 0) {
-        lastObservation = observationState.observations[OBSERVATION_LEN - 1]
+        lastObservation = observationState.observations[OBSERVATION_LEN - 1];
       } else {
-        lastObservation = observationState.observations[indexedObservation.index - 1]
+        lastObservation = observationState.observations[indexedObservation.index - 1];
       }
 
       if (lastObservation.blockTimestamp.eqn(0)) {
-        continue
+        continue;
       }
 
       if (lastObservation.blockTimestamp > indexedObservation.observation.blockTimestamp) {
-        break
+        break;
       }
 
-      const nextObservation = indexedObservation.observation
-      const timeDelta = saturatingSub(nextObservation.blockTimestamp, lastObservation.blockTimestamp)
+      const nextObservation = indexedObservation.observation;
+      const timeDelta = saturatingSub(nextObservation.blockTimestamp, lastObservation.blockTimestamp);
 
       if (timeDelta.eqn(0)) {
-        continue
+        continue;
       }
 
-      const price = (nextObservation.cumulativeToken0PriceX32.sub(lastObservation.cumulativeToken0PriceX32)).div(timeDelta)
+      const price = nextObservation.cumulativeToken0PriceX32
+        .sub(lastObservation.cumulativeToken0PriceX32)
+        .div(timeDelta);
 
-      minPrice = BN.min(minPrice, price)
-      maxPrice = BN.max(maxPrice, price)
+      minPrice = BN.min(minPrice, price);
+      maxPrice = BN.max(maxPrice, price);
     }
 
     return {
       minPrice,
       maxPrice,
-      twapPrice
-    }
+      twapPrice,
+    };
   }
 
   static calculatePreFeeAmount(
@@ -180,20 +180,26 @@ export class DynamicFee {
     observationState: CpmmObservationState,
     feeType: FeeType,
     baseFees: BN,
-    isInvokedWithSignedSegmenter: boolean
+    isInvokedWithSignedSegmenter: boolean,
   ): BN {
-    const dynamicFeeRate = this.calculateDynamicFeeRate(blockTimestamp, observationState, feeType, baseFees, isInvokedWithSignedSegmenter)
+    const dynamicFeeRate = this.calculateDynamicFeeRate(
+      blockTimestamp,
+      observationState,
+      feeType,
+      baseFees,
+      isInvokedWithSignedSegmenter,
+    );
     if (dynamicFeeRate.eqn(0)) {
-      return postFeeAmount
+      return postFeeAmount;
     } else {
-      const numerator = postFeeAmount.mul(FEE_RATE_DENOMINATOR_VALUE)
-      const denominator = FEE_RATE_DENOMINATOR_VALUE.sub(dynamicFeeRate)
+      const numerator = postFeeAmount.mul(FEE_RATE_DENOMINATOR_VALUE);
+      const denominator = FEE_RATE_DENOMINATOR_VALUE.sub(dynamicFeeRate);
 
-      return (numerator.add(denominator).subn(1)).div(denominator)
+      return numerator.add(denominator).subn(1).div(denominator);
     }
   }
 }
 
 function saturatingSub(a: BN, b: BN): BN {
-  return a > b ? a.sub(b) : new BN(0)
+  return a > b ? a.sub(b) : new BN(0);
 }

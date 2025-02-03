@@ -50,7 +50,7 @@ export default class TokenModule extends ModuleBase {
         type: "extra",
         priority: 1,
         programId:
-          token.programId || token.tags.includes("token-2022")
+          token.programId || (token.tags ?? []).includes("token-2022")
             ? TOKEN_2022_PROGRAM_ID.toBase58()
             : TOKEN_PROGRAM_ID.toBase58(),
       });

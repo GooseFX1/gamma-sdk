@@ -1,6 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 import { NATIVE_MINT, TOKEN_PROGRAM_ID, createSyncNativeInstruction } from "@solana/spl-token";
-import { PoolInfo, PoolKeys, PoolStats } from "@/api/type";
+import { GammaToken, PoolInfo, PoolKeys, PoolStats } from "@/api/type";
 import { Percent } from "@/module";
 import { BN_ZERO } from "@/common/number";
 import { WSOLMint } from "@/common/pubKey";
@@ -883,13 +883,11 @@ export default class CpmmModule extends ModuleBase {
     );
 
     const currentPrice = baseIn ? pool.poolPrice : new Decimal(1).div(pool.poolPrice);
-    const [numDecimals, denomDecimals] = baseIn ? [pool.mintB.decimals, pool.mintA.decimals] : [pool.mintA.decimals, pool.mintB.decimals];
-    const numerator = new Decimal(swapResult.destinationAmountSwapped.toString()).div(
-      new Decimal(10).pow(numDecimals),
-    );
-    const denominator = new Decimal(swapResult.sourceAmountSwapped.toString()).div(
-      new Decimal(10).pow(denomDecimals),
-    );
+    const [numDecimals, denomDecimals] = baseIn
+      ? [pool.mintB.decimals, pool.mintA.decimals]
+      : [pool.mintA.decimals, pool.mintB.decimals];
+    const numerator = new Decimal(swapResult.destinationAmountSwapped.toString()).div(new Decimal(10).pow(numDecimals));
+    const denominator = new Decimal(swapResult.sourceAmountSwapped.toString()).div(new Decimal(10).pow(denomDecimals));
     const executionPrice = numerator.div(denominator);
 
     const minAmountOut = swapResult.destinationAmountSwapped.mul(new BN((1 - slippage) * 10000)).div(new BN(10000));

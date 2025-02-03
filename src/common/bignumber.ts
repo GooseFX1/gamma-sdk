@@ -147,8 +147,8 @@ export function recursivelyDecimalToFraction<T>(info: T): ReplaceType<T, Decimal
   return isDecimal(info)
     ? decimalToFraction(info as any)
     : Array.isArray(info)
-      ? info.map((k) => recursivelyDecimalToFraction(k))
-      : notInnerObject(info)
-        ? Object.fromEntries(Object.entries(info as any).map(([k, v]) => [k, recursivelyDecimalToFraction(v)]))
-        : info;
+    ? info.map((k) => recursivelyDecimalToFraction(k))
+    : notInnerObject(info)
+    ? Object.fromEntries(Object.entries(info as any).map(([k, v]) => [k, recursivelyDecimalToFraction(v)]))
+    : info;
 }

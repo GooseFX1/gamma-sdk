@@ -30,10 +30,10 @@ export class CurveCalculator {
   }
 
   static swap(
-    sourceAmount: BN, 
-    swapSourceAmount: BN, 
-    swapDestinationAmount: BN, 
-    tradeFeeRate: BN, 
+    sourceAmount: BN,
+    swapSourceAmount: BN,
+    swapDestinationAmount: BN,
+    tradeFeeRate: BN,
     observationState: CpmmObservationState,
     isInvokedWithSignedSegmenter = false,
   ): SwapResult {
@@ -43,7 +43,7 @@ export class CurveCalculator {
       observationState,
       "volatility",
       tradeFeeRate,
-      isInvokedWithSignedSegmenter
+      isInvokedWithSignedSegmenter,
     );
 
     const sourceAmountLessFees = sourceAmount.sub(tradeFee);
@@ -74,12 +74,12 @@ export class CurveCalculator {
     outputAmount,
   }: {
     poolMintA: {
-      address: string,
-      decimals: number,
+      address: string;
+      decimals: number;
     };
     poolMintB: {
-      address: string
-      decimals: number
+      address: string;
+      decimals: number;
     };
     tradeFeeRate: BN;
     baseReserve: BN;

@@ -21,35 +21,33 @@ export function makeInitUserPoolLiquidityInstruction(
   user: PublicKey,
   poolId: PublicKey,
   userPoolLiquidity: PublicKey,
-  partner: PartnerType | null
+  partner: PartnerType | null,
 ): TransactionInstruction {
-  const dataLayout = struct([
-    option(str(), 'partner')
-  ])
+  const dataLayout = struct([option(str(), "partner")]);
 
   const keys: Array<AccountMeta> = [
     { pubkey: user, isSigner: true, isWritable: true },
     { pubkey: poolId, isSigner: false, isWritable: true },
     { pubkey: userPoolLiquidity, isSigner: false, isWritable: true },
     { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-  ]
+  ];
 
-  // `dataLayout.getSpan` returns -1 before the encoding, which causes an error during allocation. 
+  // `dataLayout.getSpan` returns -1 before the encoding, which causes an error during allocation.
   // we first allocate a buffer of 'random' length, after which we can perform the encoding and then
   // get the correct span. The resulting buffer is truncated to match the span
-  const data = Buffer.alloc(100)
+  const data = Buffer.alloc(100);
   dataLayout.encode(
     {
-      partner
+      partner,
     },
-    data
+    data,
   );
 
   return new TransactionInstruction({
     keys,
     programId,
-    data: Buffer.from([...anchorDataBuf.initUserLiquidity, ...data.slice(0, dataLayout.getSpan(data))])
-  })
+    data: Buffer.from([...anchorDataBuf.initUserLiquidity, ...data.slice(0, dataLayout.getSpan(data))]),
+  });
 }
 
 export function makeCreateCpmmPoolInInstruction(
@@ -75,7 +73,13 @@ export function makeCreateCpmmPoolInInstruction(
   maxTradeFeeRate: BN,
   volatilityFactor: BN,
 ): TransactionInstruction {
-  const dataLayout = struct([u64("amountMaxA"), u64("amountMaxB"), u64("openTime"), u64("maxTradeFeeRate"), u64("volatilityFactor")]);
+  const dataLayout = struct([
+    u64("amountMaxA"),
+    u64("amountMaxB"),
+    u64("openTime"),
+    u64("maxTradeFeeRate"),
+    u64("volatilityFactor"),
+  ]);
 
   const keys: Array<AccountMeta> = [
     { pubkey: creator, isSigner: true, isWritable: false },
