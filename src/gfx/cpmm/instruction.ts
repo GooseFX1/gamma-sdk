@@ -21,6 +21,7 @@ export function makeInitUserPoolLiquidityInstruction(
   user: PublicKey,
   poolId: PublicKey,
   userPoolLiquidity: PublicKey,
+  globalUserLpRecentChange: PublicKey,
   partner: PartnerType | null,
 ): TransactionInstruction {
   const dataLayout = struct([option(str(), "partner")]);
@@ -29,6 +30,7 @@ export function makeInitUserPoolLiquidityInstruction(
     { pubkey: user, isSigner: true, isWritable: true },
     { pubkey: poolId, isSigner: false, isWritable: true },
     { pubkey: userPoolLiquidity, isSigner: false, isWritable: true },
+    { pubkey: globalUserLpRecentChange, isSigner: false, isWritable: true },
     { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
   ];
 
@@ -72,6 +74,8 @@ export function makeCreateCpmmPoolInInstruction(
   openTime: BN,
   maxTradeFeeRate: BN,
   volatilityFactor: BN,
+  globalRewardInfo: PublicKey,
+  globalUserLpRecentChange: PublicKey,
 ): TransactionInstruction {
   const dataLayout = struct([
     u64("amountMaxA"),
@@ -95,6 +99,8 @@ export function makeCreateCpmmPoolInInstruction(
     { pubkey: vaultB, isSigner: false, isWritable: true },
     { pubkey: createPoolFeeAccount, isSigner: false, isWritable: true },
     { pubkey: observationId, isSigner: false, isWritable: true },
+    { pubkey: globalRewardInfo, isSigner: false, isWritable: true },
+    { pubkey: globalUserLpRecentChange, isSigner: false, isWritable: true },
 
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: mintProgramA, isSigner: false, isWritable: false },
@@ -135,6 +141,8 @@ export function makeDepositCpmmInInstruction(
   vaultB: PublicKey,
   mintA: PublicKey,
   mintB: PublicKey,
+  globalRewardInfo: PublicKey,
+  globalUserLpRecentChange: PublicKey,
   lpAmount: BN,
   amountMaxA: BN,
   amountMaxB: BN,
@@ -154,6 +162,9 @@ export function makeDepositCpmmInInstruction(
     { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: mintA, isSigner: false, isWritable: false },
     { pubkey: mintB, isSigner: false, isWritable: false },
+    { pubkey: globalRewardInfo, isSigner: false, isWritable: true },
+    { pubkey: globalUserLpRecentChange, isSigner: false, isWritable: true },
+    { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
   ];
 
   const data = Buffer.alloc(dataLayout.span);
@@ -190,6 +201,8 @@ export function makeWithdrawCpmmInInstruction(
   vaultB: PublicKey,
   mintA: PublicKey,
   mintB: PublicKey,
+  globalRewardInfo: PublicKey,
+  globalUserLpRecentChange: PublicKey,
   lpAmount: BN,
   amountMintA: BN,
   amountMintB: BN,
@@ -210,6 +223,9 @@ export function makeWithdrawCpmmInInstruction(
     { pubkey: mintA, isSigner: false, isWritable: false },
     { pubkey: mintB, isSigner: false, isWritable: false },
     { pubkey: MEMO_PROGRAM_ID2, isSigner: false, isWritable: false },
+    { pubkey: globalRewardInfo, isSigner: false, isWritable: true },
+    { pubkey: globalUserLpRecentChange, isSigner: false, isWritable: true },
+    { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
   ];
 
   const data = Buffer.alloc(dataLayout.span);

@@ -22,7 +22,13 @@ import {
   CpmmObservationState,
   PartnerType,
 } from "./type";
-import { getCreatePoolKeys, getPdaObservationId, getPdaUserLiquidity } from "./pda";
+import {
+  getCreatePoolKeys,
+  getPdaGlobalRewardInfo,
+  getPdaGlobalUserLpRecentChange,
+  getPdaObservationId,
+  getPdaUserLiquidity,
+} from "./pda";
 import {
   makeCreateCpmmPoolInInstruction,
   makeDepositCpmmInInstruction,
@@ -401,6 +407,12 @@ export default class CpmmModule extends ModuleBase {
       new PublicKey(poolKeys.poolId),
       this.scope.ownerPubKey,
     );
+    const globalRewardInfo = getPdaGlobalRewardInfo(new PublicKey(programId), new PublicKey(poolKeys.poolId));
+    const globalUserLpRecentChange = getPdaGlobalUserLpRecentChange(
+      new PublicKey(programId),
+      new PublicKey(poolKeys.poolId),
+      this.scope.ownerPubKey,
+    );
 
     txBuilder.addInstruction({
       instructions: [
@@ -426,6 +438,8 @@ export default class CpmmModule extends ModuleBase {
           startTime,
           maxTradeFeeRate,
           volatilityFactor,
+          globalRewardInfo.publicKey,
+          globalUserLpRecentChange.publicKey,
         ),
       ],
       instructionTypes: [InstructionType.CpmmCreatePool],
@@ -547,6 +561,12 @@ export default class CpmmModule extends ModuleBase {
       new PublicKey(poolInfo.id),
       this.scope.ownerPubKey,
     );
+    const globalRewardInfo = getPdaGlobalRewardInfo(new PublicKey(poolInfo.programId), new PublicKey(poolInfo.id));
+    const globalUserLpRecentChange = getPdaGlobalUserLpRecentChange(
+      new PublicKey(poolInfo.programId),
+      new PublicKey(poolInfo.id),
+      this.scope.ownerPubKey,
+    );
     const userLiquidity = await this.getRpcUserLiquidityAccounts([userLiquidityPda.publicKey]).then((a) => a[0]);
     if (!userLiquidity) {
       txBuilder.addInstruction({
@@ -556,6 +576,7 @@ export default class CpmmModule extends ModuleBase {
             this.scope.ownerPubKey,
             new PublicKey(poolInfo.id),
             userLiquidityPda.publicKey,
+            globalUserLpRecentChange.publicKey,
             partner ? partner : null,
           ),
         ],
@@ -580,6 +601,8 @@ export default class CpmmModule extends ModuleBase {
           new PublicKey(poolKeys.mintBVault),
           mintA,
           mintB,
+          globalRewardInfo.publicKey,
+          globalUserLpRecentChange.publicKey,
 
           computeResult ? computeResult?.liquidity : _slippage.mul(liquidity).quotient,
           baseIn ? inputAmountFee.amount : anotherAmount,
@@ -669,6 +692,12 @@ export default class CpmmModule extends ModuleBase {
       this.scope.ownerPubKey,
     );
     const userLiquidity = await this.getRpcUserLiquidityAccounts([userLiquidityPda.publicKey]).then((a) => a[0]);
+    const globalRewardInfo = getPdaGlobalRewardInfo(new PublicKey(poolInfo.programId), new PublicKey(poolInfo.id));
+    const globalUserLpRecentChange = getPdaGlobalUserLpRecentChange(
+      new PublicKey(poolInfo.programId),
+      new PublicKey(poolInfo.id),
+      this.scope.ownerPubKey,
+    );
 
     if (!userLiquidity) this.logAndCreateError("cannot found userLiquidityAccount");
     txBuilder.addInstruction({
@@ -685,6 +714,8 @@ export default class CpmmModule extends ModuleBase {
           new PublicKey(poolKeys.mintBVault),
           mintA,
           mintB,
+          globalRewardInfo.publicKey,
+          globalUserLpRecentChange.publicKey,
 
           lpAmount,
           amountMintA.sub(mintAAmountFee.fee ?? new BN(0)),

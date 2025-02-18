@@ -8,6 +8,8 @@ const POOL_LP_MINT_SEED = Buffer.from("pool_lp_mint", "utf8");
 const POOL_VAULT_SEED = Buffer.from("pool_vault", "utf8");
 const OBSERVATION_SEED = Buffer.from("observation", "utf8");
 const USER_POOL_LIQUIDITY_SEED = Buffer.from("user-pool-liquidity", "utf8");
+const GLOBAL_REWARD_INFO_SEED = Buffer.from("global_reward_info_seed", "utf8");
+const GLOBAL_USER_LP_RECENT_CHANGE_SEED = Buffer.from("global_user_lp_seed", "utf8");
 
 export function getPdaPoolAuthority(programId: PublicKey): {
   publicKey: PublicKey;
@@ -78,6 +80,27 @@ export function getPdaUserLiquidity(
   nonce: number;
 } {
   return findProgramAddress([USER_POOL_LIQUIDITY_SEED, poolId.toBuffer(), owner.toBuffer()], programId);
+}
+
+export function getPdaGlobalRewardInfo(
+  programId: PublicKey,
+  poolId: PublicKey,
+): {
+  publicKey: PublicKey;
+  nonce: number;
+} {
+  return findProgramAddress([GLOBAL_REWARD_INFO_SEED, poolId.toBuffer()], programId);
+}
+
+export function getPdaGlobalUserLpRecentChange(
+  programId: PublicKey,
+  poolId: PublicKey,
+  user: PublicKey,
+): {
+  publicKey: PublicKey;
+  nonce: number;
+} {
+  return findProgramAddress([GLOBAL_USER_LP_RECENT_CHANGE_SEED, poolId.toBuffer(), user.toBuffer()], programId);
 }
 
 function u16ToBytes(num: number): Uint8Array {
