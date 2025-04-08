@@ -65,7 +65,9 @@ export function generatePubKey({
 }
 
 function createWithSeed(fromPublicKey: PublicKey, seed: string, programId: PublicKey): PublicKey {
-  const buffer = Buffer.concat([fromPublicKey.toBuffer(), Buffer.from(seed), programId.toBuffer()].map((buf) => new Uint8Array(buf)));
+  const buffer = Buffer.concat(
+    [fromPublicKey.toBuffer(), Buffer.from(seed), programId.toBuffer()].map((buf) => new Uint8Array(buf)),
+  );
   const publicKeyBytes = sha256(new Uint8Array(buffer));
   return new PublicKey(publicKeyBytes);
 }
