@@ -272,11 +272,15 @@ export default class CpmmModule extends ModuleBase {
 
     const mockPoolStats: PoolStats = {
       range: "24H",
-      feesUSD: 0,
-      volumeTokenAUSD: 0,
-      volumeTokenBUSD: 0,
-      feesAprUSD: 0,
-      volumeAprUSD: 0,
+      feesUsd: 0,
+      volumeTokenAUsd: 0,
+      volumeTokenBUsd: 0,
+      feesAprUsd: 0,
+      volumeAprUsd: 0,
+      withdrawnKaminoProfitTokenAUsd: 0,
+      withdrawnKaminoProfitTokenBUsd: 0,
+      withdrawnKaminoProfitTokenAAprUsd: 0,
+      withdrawnKaminoProfitTokenBAprUsd: 0,
     };
 
     return {

@@ -15,38 +15,38 @@ async function mainFn(): Promise<void> {
   });
 
   try {
-    const poolsById = await gfxClient.api.fetchPoolById({ idList: [POOL_STATE] })
-    console.log(`poolsById: `, poolsById)
-  } catch(err) {
-    console.log(`pools-by-id req failed: ${err}`)
+    const poolsById = await gfxClient.api.fetchPoolById({ idList: [POOL_STATE] });
+    console.log(`poolsById: `, poolsById);
+  } catch (err) {
+    console.log(`pools-by-id req failed: ${err}`);
   }
 
   try {
-    const mint1Pools = await gfxClient.api.fetchPoolByMints({ mint1: MINT1 })
-    console.log(`mint1Pools: `, mint1Pools)
-  } catch(err) {
-    console.log(`pool-by-mints req failed: ${err}`)
+    const mint1Pools = await gfxClient.api.fetchPoolByMints({ mint1: MINT1 });
+    console.log(`mint1Pools: `, mint1Pools);
+  } catch (err) {
+    console.log(`pool-by-mints req failed: ${err}`);
   }
 
   try {
-    const mint1mint2Pools = await gfxClient.api.fetchPoolByMints({ mint1: MINT1, mint2: MINT2})
-    console.log(`mint1mint2Pools: `, mint1mint2Pools)
-  } catch(err) {
-    console.log(`pool-by-mints2 req failed: ${err}`)
+    const mint1mint2Pools = await gfxClient.api.fetchPoolByMints({ mint1: MINT1, mint2: MINT2 });
+    console.log(`mint1mint2Pools: `, mint1mint2Pools);
+  } catch (err) {
+    console.log(`pool-by-mints2 req failed: ${err}`);
   }
 
   try {
-    const poolKeys = await gfxClient.api.fetchPoolKeysById({ idList: [POOL_STATE] })
-    console.log(`poolKeysById: `, poolKeys)
-  } catch(err) {
-    console.log(`pool-keys-by-id req failed: ${err}`)
+    const poolKeys = await gfxClient.api.fetchPoolKeysById({ idList: [POOL_STATE] });
+    console.log(`poolKeysById: `, poolKeys);
+  } catch (err) {
+    console.log(`pool-keys-by-id req failed: ${err}`);
   }
 
   try {
-    const config = await gfxClient.api.getConfig(GAMMA_CONFIG)
-    console.log(`config: `, config)
-  } catch(err) {
-    console.log(`get-config req failed: ${err}`)
+    const config = await gfxClient.api.getConfig(GAMMA_CONFIG);
+    console.log(`config: `, config);
+  } catch (err) {
+    console.log(`get-config req failed: ${err}`);
   }
 
   try {
@@ -57,17 +57,17 @@ async function mainFn(): Promise<void> {
   }
 
   try {
-    const tokenInfos = await gfxClient.api.getTokenInfo([MINT1, MINT2])
-    console.log(`tokenInfos: `, tokenInfos)
-  } catch(err) {
-    console.log(`get-token-info req failed: ${err}`)
+    const tokenInfos = await gfxClient.api.getTokenInfo([MINT1, MINT2]);
+    console.log(`tokenInfos: `, tokenInfos);
+  } catch (err) {
+    console.log(`get-token-info req failed: ${err}`);
   }
 
   try {
-    const jupTokenList = await gfxClient.api.getJupTokenList()
-    console.log(`Got ${jupTokenList.length} tokens from jup token list `)
-  } catch(err) {
-    console.log(`get-jup-token-list req failed: ${err}`)
+    const jupTokenList = await gfxClient.api.getJupTokenList();
+    console.log(`Got ${jupTokenList.length} tokens from jup token list `);
+  } catch (err) {
+    console.log(`get-jup-token-list req failed: ${err}`);
   }
 }
 

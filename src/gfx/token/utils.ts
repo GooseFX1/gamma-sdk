@@ -17,7 +17,7 @@ export const parseTokenInfo = async ({
 }): Promise<RawMint | undefined> => {
   const accountData = await connection.getAccountInfo(new PublicKey(mint));
   if (!accountData || accountData.data.length !== MintLayout.span) return;
-  const tokenInfo = MintLayout.decode(accountData.data);
+  const tokenInfo = MintLayout.decode(new Uint8Array(accountData.data));
   return tokenInfo;
 };
 
