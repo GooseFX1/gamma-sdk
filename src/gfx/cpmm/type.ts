@@ -5,7 +5,12 @@ import BN from "bn.js";
 import { ComputeBudgetConfig, GetTransferAmountFee } from "@/gfx/type";
 import { SwapResult } from "./curve/calculator";
 import { Percent } from "@/module";
-import { CpmmObservationStateLayout, CpmmPoolInfoLayout, CpmmUserPoolLiquidityLayout, ObservationLayout } from "./layout";
+import {
+  CpmmObservationStateLayout,
+  CpmmPoolInfoLayout,
+  CpmmUserPoolLiquidityLayout,
+  ObservationLayout,
+} from "./layout";
 import Decimal from "decimal.js";
 
 interface MintInfo {
@@ -55,11 +60,11 @@ export interface CpmmPoolInfoInterface {
   fundFeesMintA: BN;
   fundFeesMintB: BN;
   openTime: BN;
-  recentEpoch: BN,
-  tradeFeesTokenA: BN,
-  tradeFeesTokenB: BN,
-  cumulativeVolumeTokenA: BN,
-  cumulativeVolumeTokenB: BN
+  recentEpoch: BN;
+  tradeFeesTokenA: BN;
+  tradeFeesTokenB: BN;
+  cumulativeVolumeTokenA: BN;
+  cumulativeVolumeTokenB: BN;
 }
 
 export interface CreateCpmmPoolParam<T> {
@@ -101,7 +106,7 @@ export interface CreateCpmmPoolAddress {
 }
 
 export enum PartnerType {
-  AssetDash = 'AssetDash'
+  AssetDash = "AssetDash",
 }
 
 export interface AddCpmmLiquidityParams<T = TxVersion.LEGACY> {
@@ -123,7 +128,7 @@ export interface AddCpmmLiquidityParams<T = TxVersion.LEGACY> {
     maxAnotherAmount: GetTransferAmountFee;
     liquidity: BN;
   };
-  partner?: PartnerType
+  partner?: PartnerType;
 }
 
 export interface WithdrawCpmmLiquidityParams<T = TxVersion.LEGACY> {
@@ -158,6 +163,10 @@ export interface CpmmSwapParams<T = TxVersion.LEGACY> {
     registeredSegmenter: PublicKey;
     registeredRegistry: PublicKey;
   } | null;
+  referralAccounts?: {
+    referralAccount: PublicKey;
+    referralTokenAccountWithInputMint: PublicKey;
+  } | null;
 }
 
 export interface ComputePairAmountParams {
@@ -189,6 +198,6 @@ export type CpmmComputeData = {
   authority: PublicKey;
 } & Omit<CpmmRpcData, "configInfo" | "mintA" | "mintB">;
 
-export type CpmmObservation = ReturnType<typeof ObservationLayout.decode>
-export type CpmmObservationState = ReturnType<typeof CpmmObservationStateLayout.decode>
-export type UserLiquidityAccount = ReturnType<typeof CpmmUserPoolLiquidityLayout.decode>
+export type CpmmObservation = ReturnType<typeof ObservationLayout.decode>;
+export type CpmmObservationState = ReturnType<typeof CpmmObservationStateLayout.decode>;
+export type UserLiquidityAccount = ReturnType<typeof CpmmUserPoolLiquidityLayout.decode>;

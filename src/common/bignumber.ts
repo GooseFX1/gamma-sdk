@@ -143,12 +143,11 @@ export function isDecimal(val: unknown): boolean {
 }
 
 export function recursivelyDecimalToFraction<T>(info: T): ReplaceType<T, Decimal, Fraction> {
-  // @ts-expect-error no need type for inner code
-  return isDecimal(info)
+  return (isDecimal(info)
     ? decimalToFraction(info as any)
     : Array.isArray(info)
-      ? info.map((k) => recursivelyDecimalToFraction(k))
-      : notInnerObject(info)
-        ? Object.fromEntries(Object.entries(info as any).map(([k, v]) => [k, recursivelyDecimalToFraction(v)]))
-        : info;
+    ? info.map((k) => recursivelyDecimalToFraction(k))
+    : notInnerObject(info)
+    ? Object.fromEntries(Object.entries(info as any).map(([k, v]) => [k, recursivelyDecimalToFraction(v)]))
+    : info) as any as ReplaceType<T, Decimal, Fraction>;
 }

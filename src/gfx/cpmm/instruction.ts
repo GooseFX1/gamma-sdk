@@ -4,7 +4,7 @@ import { AccountMeta, PublicKey, SystemProgram, TransactionInstruction } from "@
 import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { SYSTEM_PROGRAM_ID, RENT_PROGRAM_ID, MEMO_PROGRAM_ID2, createLogger } from "@/common";
 
-import { struct, u64, option, publicKey, str } from "@/marshmallow";
+import { struct, u64, option, str } from "@/marshmallow";
 import { PartnerType } from "./type";
 const logger = createLogger("Gfx_cpmm");
 const anchorDataBuf = {
@@ -21,35 +21,33 @@ export function makeInitUserPoolLiquidityInstruction(
   user: PublicKey,
   poolId: PublicKey,
   userPoolLiquidity: PublicKey,
-  partner: PartnerType | null
+  partner: PartnerType | null,
 ): TransactionInstruction {
-  const dataLayout = struct([
-    option(str(), 'partner')
-  ])
+  const dataLayout = struct([option(str(), "partner")]);
 
   const keys: Array<AccountMeta> = [
     { pubkey: user, isSigner: true, isWritable: true },
     { pubkey: poolId, isSigner: false, isWritable: true },
     { pubkey: userPoolLiquidity, isSigner: false, isWritable: true },
     { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-  ]
+  ];
 
-  // `dataLayout.getSpan` returns -1 before the encoding, which causes an error during allocation. 
+  // `dataLayout.getSpan` returns -1 before the encoding, which causes an error during allocation.
   // we first allocate a buffer of 'random' length, after which we can perform the encoding and then
   // get the correct span. The resulting buffer is truncated to match the span
-  const data = Buffer.alloc(100)
+  const data = Buffer.alloc(100);
   dataLayout.encode(
     {
-      partner
+      partner,
     },
-    data
+    data,
   );
 
   return new TransactionInstruction({
     keys,
     programId,
-    data: Buffer.from([...anchorDataBuf.initUserLiquidity, ...data.slice(0, dataLayout.getSpan(data))])
-  })
+    data: Buffer.from([...anchorDataBuf.initUserLiquidity, ...data.slice(0, dataLayout.getSpan(data))]),
+  });
 }
 
 export function makeCreateCpmmPoolInInstruction(
@@ -75,7 +73,13 @@ export function makeCreateCpmmPoolInInstruction(
   maxTradeFeeRate: BN,
   volatilityFactor: BN,
 ): TransactionInstruction {
-  const dataLayout = struct([u64("amountMaxA"), u64("amountMaxB"), u64("openTime"), u64("maxTradeFeeRate"), u64("volatilityFactor")]);
+  const dataLayout = struct([
+    u64("amountMaxA"),
+    u64("amountMaxB"),
+    u64("openTime"),
+    u64("maxTradeFeeRate"),
+    u64("volatilityFactor"),
+  ]);
 
   const keys: Array<AccountMeta> = [
     { pubkey: creator, isSigner: true, isWritable: false },
@@ -247,6 +251,10 @@ export function makeSwapCpmmBaseInInInstruction(
     registeredSegmenter: PublicKey;
     registeredRegistry: PublicKey;
   } | null = null,
+  referralAccounts: {
+    referralAccount: PublicKey;
+    referralTokenAccountWithInputMint: PublicKey;
+  } | null = null,
 ): TransactionInstruction {
   const dataLayout = struct([u64("amountIn"), u64("amounOutMin")]);
 
@@ -268,6 +276,19 @@ export function makeSwapCpmmBaseInInInstruction(
   if (dflowSegmenterOptions) {
     keys.push({ pubkey: dflowSegmenterOptions.registeredSegmenter, isSigner: true, isWritable: false });
     keys.push({ pubkey: dflowSegmenterOptions.registeredRegistry, isSigner: false, isWritable: false });
+  }
+
+  if (referralAccounts) {
+    if (!dflowSegmenterOptions) {
+      // We pass programId as then the program will interpret them as None, i.e not passed
+      // The smart contract requires the accounts to be in specific order by doing this we still follow the order but
+      // the program will interpret them as not passed
+      keys.push({ pubkey: programId, isSigner: false, isWritable: false });
+      keys.push({ pubkey: programId, isSigner: false, isWritable: false });
+    }
+
+    keys.push({ pubkey: referralAccounts.referralAccount, isSigner: false, isWritable: false });
+    keys.push({ pubkey: referralAccounts.referralTokenAccountWithInputMint, isSigner: false, isWritable: true });
   }
 
   const data = Buffer.alloc(dataLayout.span);
@@ -308,6 +329,10 @@ export function makeSwapCpmmBaseOutInInstruction(
     registeredSegmenter: PublicKey;
     registeredRegistry: PublicKey;
   } | null = null,
+  referralAccounts: {
+    referralAccount: PublicKey;
+    referralTokenAccountWithInputMint: PublicKey;
+  } | null = null,
 ): TransactionInstruction {
   const dataLayout = struct([u64("amountInMax"), u64("amountOut")]);
 
@@ -329,6 +354,19 @@ export function makeSwapCpmmBaseOutInInstruction(
   if (dflowSegmenterOptions) {
     keys.push({ pubkey: dflowSegmenterOptions.registeredSegmenter, isSigner: true, isWritable: false });
     keys.push({ pubkey: dflowSegmenterOptions.registeredRegistry, isSigner: false, isWritable: false });
+  }
+
+  if (referralAccounts) {
+    if (!dflowSegmenterOptions) {
+      // We pass programId as then the program will interpret them as None, i.e not passed
+      // The smart contract requires the accounts to be in specific order by doing this we still follow the order but
+      // the program will interpret them as not passed
+      keys.push({ pubkey: programId, isSigner: false, isWritable: false });
+      keys.push({ pubkey: programId, isSigner: false, isWritable: false });
+    }
+
+    keys.push({ pubkey: referralAccounts.referralAccount, isSigner: false, isWritable: false });
+    keys.push({ pubkey: referralAccounts.referralTokenAccountWithInputMint, isSigner: false, isWritable: true });
   }
 
   const data = Buffer.alloc(dataLayout.span);

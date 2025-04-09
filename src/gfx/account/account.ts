@@ -197,8 +197,8 @@ export default class Account extends ModuleBase {
           newTxInstructions.instructionTypes!.push(InstructionType.CreateATA);
         } else if (
           ataInfo.owner.equals(tokenProgram) &&
-          AccountLayout.decode(ataInfo.data).mint.equals(mint) &&
-          AccountLayout.decode(ataInfo.data).owner.equals(owner)
+          AccountLayout.decode(new Uint8Array(ataInfo.data)).mint.equals(mint) &&
+          AccountLayout.decode(new Uint8Array(ataInfo.data)).owner.equals(owner)
         ) {
           /* empty */
         } else {
@@ -385,8 +385,8 @@ export default class Account extends ModuleBase {
           instructions.push(_createATAIns);
         } else if (
           ataInfo.owner.equals(TOKEN_PROGRAM_ID) &&
-          AccountLayout.decode(ataInfo.data).mint.equals(mint) &&
-          AccountLayout.decode(ataInfo.data).owner.equals(this.scope.ownerPubKey)
+          AccountLayout.decode(new Uint8Array(ataInfo.data)).mint.equals(mint) &&
+          AccountLayout.decode(new Uint8Array(ataInfo.data)).owner.equals(this.scope.ownerPubKey)
         ) {
           /* empty */
         } else {

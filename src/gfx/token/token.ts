@@ -50,7 +50,7 @@ export default class TokenModule extends ModuleBase {
         type: "extra",
         priority: 1,
         programId:
-          token.programId || token.tags.includes("token-2022")
+          token.programId || (token.tags ?? []).includes("token-2022")
             ? TOKEN_2022_PROGRAM_ID.toBase58()
             : TOKEN_PROGRAM_ID.toBase58(),
       });
@@ -88,7 +88,7 @@ export default class TokenModule extends ModuleBase {
 
     const onlineInfo = await this.scope.connection.getAccountInfo(new PublicKey(mintStr));
     if (!onlineInfo) throw new Error(`mint address not found: ${mintStr}`);
-    const data = MintLayout.decode(onlineInfo.data);
+    const data = MintLayout.decode(new Uint8Array(onlineInfo.data));
     const mintSymbol = mintStr.toString().substring(0, 6);
     const fullInfo = {
       chainId: 101 as 101,

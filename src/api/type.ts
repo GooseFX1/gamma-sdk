@@ -7,7 +7,7 @@ export type ConfigInfo = {
   createPoolFee: string;
   protocolOwner: string;
   fundOwner: string;
-}
+};
 
 export type FetchPoolParams = {
   poolType?: PoolType;
@@ -16,11 +16,21 @@ export type FetchPoolParams = {
   pageSize?: number;
   page?: number;
   search?: string;
-}
+};
 
-type PoolType = 'all' | 'hyper' | 'primary'
-type SortOrder = 'asc' | 'desc'
-type SortBy = 'liquidity' | 'volume30d' | 'volume24h' | 'volume7d' | 'fee30d' | 'fee24h' | 'fee7d' | 'apr30d' | 'apr24h' | 'apr7d'
+type PoolType = "all" | "hyper" | "primary";
+type SortOrder = "asc" | "desc";
+type SortBy =
+  | "liquidity"
+  | "volume30d"
+  | "volume24h"
+  | "volume7d"
+  | "fee30d"
+  | "fee24h"
+  | "fee7d"
+  | "apr30d"
+  | "apr24h"
+  | "apr7d";
 
 export type PoolKeys = {
   programId: string;
@@ -31,17 +41,17 @@ export type PoolKeys = {
   mintAVault: string;
   mintBVault: string;
   authority: string;
-  config: ConfigInfo,
-  poolType: PoolType,
+  config: ConfigInfo;
+  poolType: PoolType;
   mintAProgram: string;
   mintBProgram: string;
-}
+};
 
-export type PoolInfo = {
+type BasePoolInfo<T extends GammaToken> = {
   programId: string;
   id: string;
-  mintA: GammaToken;
-  mintB: GammaToken;
+  mintA: T;
+  mintB: T;
   openTime: string;
   mintAVault: string;
   mintBVault: string;
@@ -55,20 +65,27 @@ export type PoolInfo = {
   liquidityTokenB: string | null;
   lpSupply: string | null;
   stats: {
-    daily: PoolStats,
-    weekly: PoolStats,
-    monthly: PoolStats
-  }
-}
+    daily: PoolStats;
+    weekly: PoolStats;
+    monthly: PoolStats;
+  };
+};
+
+export type PoolInfo = BasePoolInfo<GammaToken>;
+export type ApiPoolInfo = BasePoolInfo<GammaApiToken>;
 
 export type PoolStats = {
-  range: '24H' | '7D' | '30D';
-  feesUSD: number;
-  volumeTokenAUSD: number;
-  volumeTokenBUSD: number;
-  feesAprUSD: number;
-  volumeAprUSD: number;
-}
+  range: "24H" | "7D" | "30D";
+  feesUsd: number;
+  volumeTokenAUsd: number;
+  volumeTokenBUsd: number;
+  feesAprUsd: number;
+  volumeAprUsd: number;
+  withdrawnKaminoProfitTokenAUsd: number;
+  withdrawnKaminoProfitTokenBUsd: number;
+  withdrawnKaminoProfitTokenAAprUsd: number;
+  withdrawnKaminoProfitTokenBAprUsd: number;
+};
 
 export type PaginatedPoolInfos = {
   currentPage: number;
@@ -76,62 +93,68 @@ export type PaginatedPoolInfos = {
   totalPages: number;
   totalItems: number;
   count: number;
-  pools: PoolInfo[];
-}
+  pools: ApiPoolInfo[];
+};
 
 export enum PoolFetchTypeEnum {
-  All = 'all',
-  Hyper = 'hyper',
-  Primary = 'primary',
+  All = "all",
+  Hyper = "hyper",
+  Primary = "primary",
 }
 
 export type GammaToken = {
-  address: string
-  name: string
-  symbol: string
-  decimals: number
-  logoURI: string
-  tags: string[]
-  // dailyVolume: number | null
-  // freezeAuthority: string | null
-  // mintAuthority: string | null
-  // price: number
-  extensions?: ExtensionsItem | null
-}
+  address: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+  logoURI: string;
+  tags?: string[];
+  extensions?: ExtensionsItem | null;
+};
+
+export type GammaApiToken = {
+  address: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+  logoURI: string;
+  dailyVolume: number | null;
+  freezeAuthority: string | null;
+  mintAuthority: string | null;
+  extensions: ExtensionsItem | null;
+  cumulativeTradeFees: string | null;
+  withdrawnKaminoProfit: string | null;
+  protocolFees: string | null;
+  fundFees: string | null;
+};
 
 export type JupiterListToken = {
-  address: string
-  name: string
-  symbol: string
-  decimals: number
-  logoURI: string
-  tags: string[] // "hasFreeze" | "hasTransferFee" | "token-2022" | "community" | "unknown" ..etc
-  // daily_volume: number | null
-  // freeze_authority: string | null
-  // mint_authority: string | null
-  // minted_at: string
-  // created_at: string
-  // permanent_delegate: string | null
+  address: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+  logoURI: string;
+  tags: string[]; // "hasFreeze" | "hasTransferFee" | "token-2022" | "community" | "unknown" ..etc
   extensions: ExtensionsItem;
 };
 
 type ExtensionsItem = {
-  coingeckoId?: string
-  feeConfig?: TransferFeeDataBaseType
-}
+  coingeckoId?: string;
+  feeConfig?: TransferFeeDataBaseType;
+};
 
 export interface TransferFeeDataBaseType {
-  transferFeeConfigAuthority: string
-  withdrawWithheldAuthority: string
-  withheldAmount: string
+  transferFeeConfigAuthority: string;
+  withdrawWithheldAuthority: string;
+  withheldAmount: string;
   olderTransferFee: {
-    epoch: string
-    maximumFee: string
-    transferFeeBasisPoints: number
-  }
+    epoch: string;
+    maximumFee: string;
+    transferFeeBasisPoints: number;
+  };
   newerTransferFee: {
-    epoch: string
-    maximumFee: string
-    transferFeeBasisPoints: number
-  }
+    epoch: string;
+    maximumFee: string;
+    transferFeeBasisPoints: number;
+  };
 }

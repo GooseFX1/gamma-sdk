@@ -14,4 +14,4 @@ export * from "./programId";
 export * from "./pda";
 export * from "./transfer";
 export * from "./txTool/lookupTable";
-export * from "./number"
+export * from "./number";
