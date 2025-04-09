@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/GooseFX1/gamma-sdk/compare/v1.1.0...v1.2.0) (2025-04-09)
+
+
+### Features
+
+* **cpmm:** add function for partners to get total invested ([138ced5](https://github.com/GooseFX1/gamma-sdk/commit/138ced5dcc89fde57b24b407746e7dbd1ed72b20))
+
 # [1.1.0](https://github.com/GooseFX1/gamma-sdk/compare/v1.0.2...v1.1.0) (2025-01-17)
 
 
