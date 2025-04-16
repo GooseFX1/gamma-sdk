@@ -19,7 +19,7 @@ export const CpmmConfigInfoLayout = struct([
 ]);
 
 export const partnerNameToIdMap = {
-  [PartnerType.AssetDash]: 0,
+  [PartnerType.Zeus]: 0,
 };
 
 export const CpmmPartnerInfoLayout = struct([

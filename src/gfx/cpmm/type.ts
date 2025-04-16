@@ -106,7 +106,7 @@ export interface CreateCpmmPoolAddress {
 }
 
 export enum PartnerType {
-  AssetDash = "AssetDash",
+  Zeus = "Zeus",
 }
 
 export interface AddCpmmLiquidityParams<T = TxVersion.LEGACY> {

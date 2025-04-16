@@ -56,7 +56,7 @@ async function mainFn(): Promise<void> {
       microLamports: MICRO_LAMPORTS,
     },
     txVersion: TxVersion.V0,
-    partner: PartnerType.AssetDash,
+    partner: PartnerType.Zeus,
   });
 
   let latestBlockhash = await client.connection.getLatestBlockhash();
