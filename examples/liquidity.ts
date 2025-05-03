@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
-import { GfxCpmmClient, PartnerType } from "../src/gfx/index";
+import { GfxCpmmClient } from "../src/gfx/index";
 import fs from "fs";
 import BN from "bn.js";
 
@@ -56,7 +56,6 @@ async function mainFn(): Promise<void> {
       microLamports: MICRO_LAMPORTS,
     },
     txVersion: TxVersion.V0,
-    partner: PartnerType.Zeus,
   });
 
   let latestBlockhash = await client.connection.getLatestBlockhash();

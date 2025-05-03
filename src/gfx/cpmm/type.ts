@@ -1,70 +1,18 @@
 import { EpochInfo, PublicKey } from "@solana/web3.js";
-import { ConfigInfo, PoolInfo, GammaToken, PoolKeys } from "@/api/type";
+import { ConfigInfo, PoolInfo, PoolKeys } from "@/api/type";
 import { TxVersion } from "@/common/txTool/txType";
 import BN from "bn.js";
 import { ComputeBudgetConfig, GetTransferAmountFee } from "@/gfx/type";
 import { SwapResult } from "./curve/calculator";
 import { Percent } from "@/module";
-import {
-  CpmmObservationStateLayout,
-  CpmmPoolInfoLayout,
-  CpmmUserPoolLiquidityLayout,
-  ObservationLayout,
-} from "./layout";
+import { Gamma } from "../idl/gamma.type";
 import Decimal from "decimal.js";
+import { IdlAccounts, IdlTypes } from "@coral-xyz/anchor";
 
 interface MintInfo {
   address: string;
   decimals: number;
   programId: string;
-}
-
-export interface CpmmConfigInfoInterface {
-  bump: number;
-  disableCreatePool: boolean;
-  index: number;
-  tradeFeeRate: BN;
-  protocolFeeRate: BN;
-  fundFeeRate: BN;
-  createPoolFee: BN;
-
-  protocolOwner: PublicKey;
-  fundOwner: PublicKey;
-}
-
-export interface CpmmPoolInfoInterface {
-  configId: PublicKey;
-  poolCreator: PublicKey;
-  vaultA: PublicKey;
-  vaultB: PublicKey;
-
-  mintLp: PublicKey;
-  mintA: PublicKey;
-  mintB: PublicKey;
-
-  mintProgramA: PublicKey;
-  mintProgramB: PublicKey;
-
-  observationId: PublicKey;
-
-  bump: number;
-  status: number;
-
-  lpDecimals: number;
-  mintDecimalA: number;
-  mintDecimalB: number;
-
-  lpAmount: BN;
-  protocolFeesMintA: BN;
-  protocolFeesMintB: BN;
-  fundFeesMintA: BN;
-  fundFeesMintB: BN;
-  openTime: BN;
-  recentEpoch: BN;
-  tradeFeesTokenA: BN;
-  tradeFeesTokenB: BN;
-  cumulativeVolumeTokenA: BN;
-  cumulativeVolumeTokenB: BN;
 }
 
 export interface CreateCpmmPoolParam<T> {
@@ -105,10 +53,6 @@ export interface CreateCpmmPoolAddress {
   feeConfig: ConfigInfo;
 }
 
-export enum PartnerType {
-  Zeus = "Zeus",
-}
-
 export interface AddCpmmLiquidityParams<T = TxVersion.LEGACY> {
   poolInfo: PoolInfo;
   poolKeys?: PoolKeys;
@@ -128,7 +72,7 @@ export interface AddCpmmLiquidityParams<T = TxVersion.LEGACY> {
     maxAnotherAmount: GetTransferAmountFee;
     liquidity: BN;
   };
-  partner?: PartnerType;
+  partner?: PublicKey;
 }
 
 export interface WithdrawCpmmLiquidityParams<T = TxVersion.LEGACY> {
@@ -145,8 +89,8 @@ export interface CpmmSwapParams<T = TxVersion.LEGACY> {
   poolInfo: PoolInfo;
   poolKeys?: PoolKeys;
   payer?: PublicKey;
-  baseIn: boolean;
-  fixedOut?: boolean;
+  zeroForOne: boolean;
+  baseIn?: boolean;
   slippage?: number;
   swapResult: Pick<SwapResult, "sourceAmountSwapped" | "destinationAmountSwapped">;
   inputAmount: BN;
@@ -179,12 +123,28 @@ export interface ComputePairAmountParams {
   baseIn?: boolean;
 }
 
-export type CpmmRpcData = ReturnType<typeof CpmmPoolInfoLayout.decode> & {
+export type CpmmObservationState = IdlAccounts<Gamma>["observationState"];
+export type CpmmConfig = IdlAccounts<Gamma>["ammConfig"];
+export type CpmmPool = IdlAccounts<Gamma>["poolState"];
+export type CpmmPoolPartners = IdlAccounts<Gamma>["poolPartnerInfos"];
+export type CpmmRewardInfo = IdlAccounts<Gamma>["rewardInfo"];
+export type CpmmUserLiquidityAccount = IdlAccounts<Gamma>["userPoolLiquidity"];
+export type CpmmUserRewardInfo = IdlAccounts<Gamma>["userRewardInfo"];
+export type CpmmObservation = IdlTypes<Gamma>["observation"];
+export type UserLiquidityAccount = IdlAccounts<Gamma>["userPoolLiquidity"];
+
+export enum CpmmCoder {
+  CPMM_POOL = "poolState",
+  CPMM_POOL_PARTNERS = "poolPartnerInfos",
+}
+
+export type CpmmRpcData = CpmmPool & {
   baseReserve: BN;
   quoteReserve: BN;
   vaultAAmount: BN;
   vaultBAmount: BN;
-  configInfo?: CpmmConfigInfoInterface;
+  configInfo?: CpmmConfig;
+  partnerInfo?: CpmmPoolPartners;
   poolPrice: Decimal;
   programId: PublicKey;
 };
@@ -192,12 +152,8 @@ export type CpmmRpcData = ReturnType<typeof CpmmPoolInfoLayout.decode> & {
 export type CpmmComputeData = {
   id: PublicKey;
   version: 7;
-  configInfo: CpmmConfigInfoInterface;
+  configInfo: CpmmConfig;
   mintA: MintInfo;
   mintB: MintInfo;
   authority: PublicKey;
 } & Omit<CpmmRpcData, "configInfo" | "mintA" | "mintB">;
-
-export type CpmmObservation = ReturnType<typeof ObservationLayout.decode>;
-export type CpmmObservationState = ReturnType<typeof CpmmObservationStateLayout.decode>;
-export type UserLiquidityAccount = ReturnType<typeof CpmmUserPoolLiquidityLayout.decode>;

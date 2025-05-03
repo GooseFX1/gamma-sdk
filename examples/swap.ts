@@ -14,7 +14,8 @@ const AMOUNT = new BN(parseInt(process.env.AMOUNT!));
 const POOL_STATE = new PublicKey(process.env.POOL!);
 const MICRO_LAMPORTS = parseInt(process.env.DEFAULT_CU_LAMPORTS ?? "1200000");
 const SLIPPAGE_BPS = parseInt(process.env.SLIPPAGE_BPS ?? "1000");
-const BASE_IN = process.env.BASE_IN === undefined ? true : process.env.BASE_IN === "true";
+const ZERO_FOR_ONE = process.env.ZERO_FOR_ONE ? process.env.ZERO_FOR_ONE.toLowerCase() === "true" : true;
+const BASE_IN = process.env.BASE_IN ? process.env.BASE_IN.toLowerCase() === "true" : undefined;
 
 async function mainFn(): Promise<void> {
   const keypair = createKeypairFromFile(KEYPAIR_PATH);
@@ -29,19 +30,21 @@ async function mainFn(): Promise<void> {
   });
 
   const info = await client.cpmm.getPoolInfoFromRpc(POOL_STATE.toBase58());
-  const observationState = await client.cpmm.getObservationStates([info.rpcData.observationId]).then((res) => res[0]);
+  const observationState = await client.cpmm.getObservationStates([info.rpcData.observationKey]).then((res) => res[0]);
 
   const swapResult = CurveCalculator.swap(
     AMOUNT,
-    BASE_IN ? info.rpcData.baseReserve : info.rpcData.quoteReserve,
-    BASE_IN ? info.rpcData.quoteReserve : info.rpcData.baseReserve,
+    ZERO_FOR_ONE ? info.rpcData.baseReserve : info.rpcData.quoteReserve,
+    ZERO_FOR_ONE ? info.rpcData.quoteReserve : info.rpcData.baseReserve,
     info.rpcData.configInfo!.tradeFeeRate,
     observationState!,
+    info.rpcData.volatilityFactor,
   );
 
   const { transaction } = await client.cpmm.swap({
     poolInfo: info.poolInfo,
     poolKeys: info.poolKeys,
+    zeroForOne: ZERO_FOR_ONE,
     baseIn: BASE_IN,
     inputAmount: AMOUNT,
     swapResult,

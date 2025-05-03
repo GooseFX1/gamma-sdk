@@ -23,12 +23,12 @@ export function parseTokenAccountResp({ owner, solAccountResp, tokenAccountResp 
   const tokenAccountRawInfos: TokenAccountRaw[] = [];
 
   for (const { pubkey, account } of tokenAccountResp.value) {
-    const accountInfo = splAccountLayout.decode(account.data);
+    const accountInfo = splAccountLayout.decode(new Uint8Array(account.data));
     const { mint, amount } = accountInfo;
     tokenAccounts.push({
       publicKey: pubkey,
       mint,
-      amount,
+      amount: new BN(amount.toString()),
       isAssociated: getATAAddress(owner, mint, account.owner).publicKey.equals(pubkey),
       isNative: false,
       programId: account.owner,

@@ -12,6 +12,9 @@ import Cpmm from "./cpmm/cpmm";
 
 import TokenModule from "./token/token";
 import { SignAllTransactions } from "./type";
+import { AnchorProvider, Program, Wallet } from "@coral-xyz/anchor";
+import { Gamma } from "./idl/gamma.type";
+import IDL from "./idl/gamma.json";
 
 export interface ClientLoadParams extends TokenAccountDataProp, Omit<ClientApiBatchRequestParams, "api"> {
   /* ================= solana ================= */
@@ -61,6 +64,7 @@ export class GfxCpmmClient {
   public rawBalances: Map<string, string> = new Map();
   public apiData: ApiData;
   public blockhashCommitment: Commitment;
+  public program: Program<Gamma>;
 
   private _connection: Connection;
   private _owner: Owner | undefined;
@@ -97,6 +101,10 @@ export class GfxCpmmClient {
     this._owner = owner ? new Owner(owner) : undefined;
     this._signAllTransactions = config.signAllTransactions;
     this.blockhashCommitment = blockhashCommitment;
+    this.program = new Program(
+      IDL,
+      new AnchorProvider(connection, new Wallet(owner instanceof Keypair ? owner : Keypair.generate())),
+    );
 
     this.api = api;
     this._apiCacheTime = apiCacheTime || 5 * 60 * 1000;
