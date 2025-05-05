@@ -37,6 +37,10 @@ export interface ClientLoadParams extends TokenAccountDataProp, Omit<ClientApiBa
   disableFeatureCheck?: boolean;
   disableLoadToken?: boolean;
   blockhashCommitment?: Commitment;
+  kamino?: {
+    market?: PublicKey;
+    programId?: PublicKey;
+  }
 }
 
 export interface ClientApiBatchRequestParams {
@@ -65,6 +69,10 @@ export class GfxCpmmClient {
   public apiData: ApiData;
   public blockhashCommitment: Commitment;
   public program: Program<Gamma>;
+  public kamino?: {
+    market?: PublicKey;
+    programId?: PublicKey;
+  }
 
   private _connection: Connection;
   private _owner: Owner | undefined;

@@ -110,6 +110,7 @@ export async function makeWithdrawCpmmInInstruction(
   lpAmount: BN,
   amountMintA: BN,
   amountMintB: BN,
+  kaminoAccounts?: AccountMeta[]
 ): Promise<TransactionInstruction> {
   return await program.methods
     .withdraw(lpAmount, amountMintA, amountMintB)
@@ -123,6 +124,7 @@ export async function makeWithdrawCpmmInInstruction(
       vault0Mint,
       vault1Mint,
     })
+    .remainingAccounts(kaminoAccounts ?? [])
     .instruction();
 }
 
@@ -348,7 +350,6 @@ export async function makeAddPartnerInstruction(
   program: Program<Gamma>,
   ammConfig: PublicKey,
   poolState: PublicKey,
-  poolPartners: PublicKey,
   partner: PublicKey,
   authority?: PublicKey,
 ): Promise<TransactionInstruction> {
@@ -358,7 +359,6 @@ export async function makeAddPartnerInstruction(
       authority,
       ammConfig,
       poolState,
-      poolPartners,
       partner,
     })
     .instruction();

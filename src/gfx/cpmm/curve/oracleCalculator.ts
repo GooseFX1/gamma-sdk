@@ -1,16 +1,13 @@
 import BN from "bn.js";
 import { DynamicFee, FEE_RATE_DENOMINATOR_VALUE } from "./fee";
 import { ConstantProductCurve } from "./constantProduct";
-import { PublicKey } from "@solana/web3.js";
-import { BNDivCeil } from "@/common";
-import Decimal from "decimal.js-light";
 import { CpmmObservationState, CpmmPool } from "../type";
-import { RoundDirection, SwapResult, SwapWithoutFeesResult, TradingTokenResult, CurveCalculator } from "./calculator";
+import { SwapResult, CurveCalculator } from "./calculator";
 import { saturatingSub, checkedCeilDiv } from "./common";
 
 // Price scaled to 9 decimal places
 const D9 = new BN(Math.pow(10, 9));
-const D9_SQUARED = new BN(Math.pow(10, 18));
+const D9_SQUARED = D9.mul(D9);
 
 export class OracleBasedCurveCalculator {
   static validate_supply(tokenAmount0: BN, tokenAmount1: BN): void {

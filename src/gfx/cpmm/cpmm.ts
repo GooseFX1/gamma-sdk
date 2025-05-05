@@ -1,5 +1,5 @@
-import { PublicKey } from "@solana/web3.js";
-import { NATIVE_MINT, TOKEN_PROGRAM_ID, createSyncNativeInstruction } from "@solana/spl-token";
+import { AccountMeta, PublicKey, SystemProgram } from "@solana/web3.js";
+import { NATIVE_MINT, TOKEN_PROGRAM_ID, createCloseAccountInstruction, createSyncNativeInstruction, createTransferCheckedInstruction, createTransferInstruction } from "@solana/spl-token";
 import { PoolInfo, PoolKeys, PoolStats } from "@/api/type";
 import { Percent } from "@/module";
 import { BN_ZERO } from "@/common/number";
@@ -33,23 +33,34 @@ import {
   makeSwapCpmmBaseInInstruction,
   makeSwapCpmmBaseOutInstruction,
   makeSwapCpmmOracleBaseInInstruction,
+  makeInitializePartnerInstruction,
+  makeAddPartnerInstruction,
 } from "./instruction";
 import BN from "bn.js";
 import Decimal from "decimal.js";
-import { fetchMultipleMintInfos, getMultipleAccountsInfoWithCustomFlags, getTransferAmountFeeV2 } from "@/common";
-import { GetTransferAmountFee, ReturnTypeFetchMultipleMintInfos } from "@/gfx/type";
+import { fetchMultipleMintInfos, getTransferAmountFeeV2 } from "@/common";
+import { ComputeBudgetConfig, GetTransferAmountFee, ReturnTypeFetchMultipleMintInfos } from "@/gfx/type";
 import { toGammaApiToken, toFeeConfig, SOL_INFO } from "../token";
 import { getPdaPoolAuthority } from "./pda";
 import { ConstantProductCurve } from "./curve/constantProduct";
-import { Address, Program } from "@coral-xyz/anchor";
+import { Idl, Program } from "@coral-xyz/anchor";
 import { Gamma } from "../idl/gamma.type";
+import { getReserveAccountsForWithdraw, getReservesForMarket, KaminoReserve } from "./kamino";
 
 export default class CpmmModule extends ModuleBase {
   private program: Program<Gamma>;
+  private kamino?: {
+    market?: PublicKey;
+    programId?: PublicKey;
+  }
+  /** map of liquidity mint to kamino reserve */
+  private reserves: Map<string, KaminoReserve>;
 
   constructor(params: ModuleBaseProps) {
     super(params);
     this.program = params.scope.program;
+    this.kamino = params.scope.kamino;
+    this.reserves = new Map()
   }
 
   public async load(): Promise<void> {
@@ -246,7 +257,7 @@ export default class CpmmModule extends ModuleBase {
     poolKeys: PoolKeys;
     rpcData: CpmmRpcData;
   }> {
-    const rpcData = await this.getRpcPoolInfo(poolId);
+    const rpcData = await this.getRpcPoolInfo(poolId, true);
     const partnerKeys = rpcData
       .partnerInfo!.infos.map((i) => i.partner.toBase58())
       .filter((i) => i !== PublicKey.default.toBase58());
@@ -630,13 +641,29 @@ export default class CpmmModule extends ModuleBase {
 
   public async withdrawLiquidity<T extends TxVersion>(params: WithdrawCpmmLiquidityParams<T>): Promise<MakeTxData<T>> {
     const { poolInfo, poolKeys: propPoolKeys, lpAmount, slippage, computeBudgetConfig, txVersion } = params;
+    let tokenAReserve: KaminoReserve | undefined = this.reserves.get(poolInfo.mintA.address)
+    let tokenBReserve: KaminoReserve | undefined = this.reserves.get(poolInfo.mintB.address)
+    if (!tokenAReserve || !tokenBReserve) {
+      this.reserves = await getReservesForMarket(this.program.provider)
+      tokenAReserve = this.reserves.get(poolInfo.mintA.address)
+      tokenBReserve = this.reserves.get(poolInfo.mintB.address)
+    }
 
     // if (this.scope.availability.addStandardPosition === false)
     //   this.logAndCreateError("add liquidity feature disabled in your region");
 
-    const _slippage = new Percent(new BN(1)).sub(slippage);
-
     const rpcPoolData = await this.getRpcPoolInfo(poolInfo.id);
+    const kaminoAccounts = getReserveAccountsForWithdraw(
+      new PublicKey(poolInfo.id),
+      tokenAReserve,
+      tokenBReserve,
+      rpcPoolData.maxSharedToken0,
+      rpcPoolData.maxSharedToken1,
+      this.program.programId,
+      this.kamino?.programId
+    )
+    
+    const _slippage = new Percent(new BN(1)).sub(slippage);
     const [amountMintA, amountMintB] = [
       _slippage.mul(lpAmount.mul(rpcPoolData.baseReserve).div(rpcPoolData.lpSupply)).quotient,
       _slippage.mul(lpAmount.mul(rpcPoolData.quoteReserve).div(rpcPoolData.lpSupply)).quotient,
@@ -720,6 +747,7 @@ export default class CpmmModule extends ModuleBase {
           lpAmount,
           amountMintA.sub(mintAAmountFee.fee ?? new BN(0)),
           amountMintB.sub(mintBAmountFee.fee ?? new BN(0)),
+          kaminoAccounts
         ),
       ],
       instructionTypes: [InstructionType.CpmmWithdrawLiquidity],
@@ -821,7 +849,14 @@ export default class CpmmModule extends ModuleBase {
     const inputMint = zeroForOne ? poolInfo.mintA.address : poolInfo.mintB.address;
     if (wrapSol && inputMint === SOL_INFO.address) {
       txBuilder.addInstruction({
-        instructions: [createSyncNativeInstruction(new PublicKey(zeroForOne ? mintATokenAcc! : mintBTokenAcc!))],
+        instructions: [
+          SystemProgram.transfer({
+            fromPubkey: this.scope.ownerPubKey,
+            toPubkey: zeroForOne ? mintATokenAcc!: mintBTokenAcc!,
+            lamports: BigInt(swapResult.sourceAmountSwapped.toString())
+          }),
+          createSyncNativeInstruction(new PublicKey(zeroForOne ? mintATokenAcc! : mintBTokenAcc!))
+        ],
       });
     }
 
@@ -976,7 +1011,14 @@ export default class CpmmModule extends ModuleBase {
     const inputMint = zeroForOne ? poolInfo.mintA.address : poolInfo.mintB.address;
     if (wrapSol && inputMint === SOL_INFO.address) {
       txBuilder.addInstruction({
-        instructions: [createSyncNativeInstruction(new PublicKey(zeroForOne ? mintATokenAcc! : mintBTokenAcc!))],
+        instructions: [
+          SystemProgram.transfer({
+            fromPubkey: this.scope.ownerPubKey,
+            toPubkey: zeroForOne ? mintATokenAcc!: mintBTokenAcc!,
+            lamports: BigInt(swapResult.sourceAmountSwapped.toString())
+          }),
+          createSyncNativeInstruction(new PublicKey(zeroForOne ? mintATokenAcc! : mintBTokenAcc!))
+        ],
       });
     }
 
@@ -1158,6 +1200,85 @@ export default class CpmmModule extends ModuleBase {
       maxAnotherAmount: slippageAdjustedAmount,
       liquidity,
     };
+  }
+
+  public async initializePartner<T extends TxVersion>({
+    pool,
+    poolKeys,
+    partnerKey,
+    name,
+    token0TokenAccount,
+    token1TokenAccount,
+    computeBudgetConfig,
+    txVersion
+  }: {
+    pool: string,
+    poolKeys: PoolKeys | undefined,
+    partnerKey: PublicKey,
+    name: string,
+    token0TokenAccount?: PublicKey,
+    token1TokenAccount?: PublicKey,
+    computeBudgetConfig?: ComputeBudgetConfig,
+    txVersion?: T
+  }): Promise<MakeTxData<T>> {
+    const txBuilder = this.createTxBuilder();
+    const keys = poolKeys ?? (await this.getCpmmPoolKeys(pool))
+    const tokenAccount0 = token0TokenAccount ?? this.scope.account.getAssociatedTokenAccount(
+      new PublicKey(keys.mintA), new PublicKey(keys.mintAProgram)
+    )
+    const tokenAccount1 = token1TokenAccount ?? this.scope.account.getAssociatedTokenAccount(
+      new PublicKey(keys.mintB), new PublicKey(keys.mintBProgram)
+    )
+    txBuilder.addInstruction({
+      instructions: [
+        await makeInitializePartnerInstruction(
+          this.program,
+          this.scope.ownerPubKey,
+          this.scope.ownerPubKey,
+          new PublicKey(pool),
+          partnerKey,
+          name,
+          tokenAccount0,
+          tokenAccount1
+        )
+      ]
+    })
+
+    txBuilder.addCustomComputeBudget(computeBudgetConfig);
+
+    return txBuilder.versionBuild({ txVersion }) as Promise<MakeTxData<T>>;
+  }
+
+  public async addPartner<T extends TxVersion>({
+    pool,
+    poolKeys,
+    partnerKey,
+    computeBudgetConfig,
+    txVersion
+  }: {
+    pool: string,
+    poolKeys: PoolKeys | undefined,
+    partnerKey: PublicKey,
+    computeBudgetConfig?: ComputeBudgetConfig,
+    txVersion?: T
+  }): Promise<MakeTxData<T>> {
+    const txBuilder = this.createTxBuilder();
+    const keys = poolKeys ?? (await this.getCpmmPoolKeys(pool))
+    txBuilder.addInstruction({
+      instructions: [
+        await makeAddPartnerInstruction(
+          this.program,
+          new PublicKey(keys.config.id),
+          new PublicKey(pool),
+          partnerKey,
+          this.scope.ownerPubKey
+        )
+      ]
+    })
+
+    txBuilder.addCustomComputeBudget(computeBudgetConfig);
+
+    return txBuilder.versionBuild({ txVersion }) as Promise<MakeTxData<T>>;
   }
 
   public async getRpcUserLiquidityAccounts(addresses: PublicKey[]): Promise<(UserLiquidityAccount | null)[]> {
