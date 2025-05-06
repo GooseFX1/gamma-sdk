@@ -35,7 +35,8 @@
     "build": "yarn build-lib && yarn copy-package-json",
     "push": "yarn build && yarn publish",
     "prepare": "husky install",
-    "copy-package-json": "cp package.json lib/package.json"
+    "copy-package-json": "cp package.json lib/package.json",
+    "typecheck": "npx tsc --noEmit"
   },
   "resolutions": {
     "@solana/spl-token": "^0.4.6",
@@ -43,8 +44,8 @@
     "bn.js": "^5.2.1"
   },
   "dependencies": {
+    "@coral-xyz/anchor": "^0.31.1",
     "@project-serum/serum": "^0.13.65",
-    "@solana/buffer-layout": "^4.0.1",
     "@solana/spl-token": "^0.4.6",
     "@solana/web3.js": "^1.91.8",
     "axios": "^1.1.3",

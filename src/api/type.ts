@@ -47,6 +47,14 @@ export type PoolKeys = {
   mintBProgram: string;
 };
 
+export type PartnerInfo = {
+  address: string;
+  name: string;
+  authority: string;
+  token0TokenAccount: string;
+  token1TokenAccount: string;
+};
+
 type BasePoolInfo<T extends GammaToken> = {
   programId: string;
   id: string;
@@ -69,6 +77,7 @@ type BasePoolInfo<T extends GammaToken> = {
     weekly: PoolStats;
     monthly: PoolStats;
   };
+  partners: PartnerInfo[];
 };
 
 export type PoolInfo = BasePoolInfo<GammaToken>;

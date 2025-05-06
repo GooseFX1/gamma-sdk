@@ -2,12 +2,11 @@ import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 
 import { BigNumberish } from "@/common/number";
-import { GetStructureSchema } from "@/marshmallow";
-
 import { splAccountLayout } from "./layout";
+import { AccountLayout } from "@solana/spl-token";
 
 export type SplAccountLayout = typeof splAccountLayout;
-export type SplAccount = GetStructureSchema<SplAccountLayout>;
+export type SplAccount = ReturnType<typeof AccountLayout.decode>;
 export interface TokenAccountRaw {
   programId: PublicKey;
   pubkey: PublicKey;
