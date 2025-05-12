@@ -13,6 +13,8 @@ export function checkedCeilDiv(dividend: BN, rhs: BN): BN[] {
   if (rhs.isZero()) throw Error("rhs is zero");
   const quotient = dividend.div(rhs);
   if (quotient.isZero()) return [quotient, rhs];
+  const remainder = dividend.sub(quotient.mul(rhs));
+  if (remainder.isZero()) return [quotient, rhs];
   return [quotient.add(new BN(1)), rhs];
 }
 

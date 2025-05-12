@@ -118,11 +118,14 @@ export class OracleBasedCurveCalculator {
     )[0];
 
     const sourceAmountAfterFees = saturatingSub(amountToBeSwappedWithInvariantCurve, invariantSwapTradeFees);
-    const outputTokensFromInvariantSwap = ConstantProductCurve.swapWithoutFees(
-      sourceAmountAfterFees,
-      newSwapSourceAmount,
-      newSwapDestinationAmount,
-    ).destinationAmountSwapped;
+    let outputTokensFromInvariantSwap = new BN(0);
+    if (!sourceAmountAfterFees.isZero()) {
+      outputTokensFromInvariantSwap = ConstantProductCurve.swapWithoutFees(
+        sourceAmountAfterFees,
+        newSwapSourceAmount,
+        newSwapDestinationAmount,
+      ).destinationAmountSwapped;
+    }
 
     const destinationAmountSwapped = outputTokensFromOracleSwap.add(outputTokensFromInvariantSwap);
     return {
