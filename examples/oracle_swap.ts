@@ -11,12 +11,11 @@ import { OracleBasedCurveCalculator } from "@/gfx/cpmm/curve/oracleCalculator";
 const RPC_URL = process.env.RPC_URL!;
 const SEND_RPC_URL = process.env.SEND_RPC_URL ?? RPC_URL;
 const KEYPAIR_PATH = process.env.KEYPAIR_PATH!;
-const AMOUNT = new BN(parseInt(process.env.AMOUNT!));
+const AMOUNT = new BN(1_000_000);
 const POOL_STATE = new PublicKey(process.env.POOL!);
 const MICRO_LAMPORTS = parseInt(process.env.DEFAULT_CU_LAMPORTS ?? "500000");
 const SLIPPAGE_BPS = parseInt(process.env.SLIPPAGE_BPS ?? "1000");
-const ZERO_FOR_ONE = process.env.ZERO_FOR_ONE ? process.env.ZERO_FOR_ONE.toLowerCase() === "true" : true;
-const BASE_IN = process.env.BASE_IN ? process.env.BASE_IN.toLowerCase() === "true" : undefined;
+const ZERO_FOR_ONE = false;
 
 async function mainFn(): Promise<void> {
   const keypair = createKeypairFromFile(KEYPAIR_PATH);
@@ -40,15 +39,17 @@ async function mainFn(): Promise<void> {
     info.rpcData.quoteReserve,
     info.rpcData.configInfo!.tradeFeeRate,
     observationState!,
-    info.rpcData
+    info.rpcData,
   );
-  console.log(`swapResult: `, swapResult)
+  console.log("swapResult", swapResult);
+
+  console.log("swapResult, sourceAmountSwapped", swapResult.sourceAmountSwapped.toNumber());
+  console.log("swapResult destinationAmountSwapped", swapResult.destinationAmountSwapped.toNumber() / 10 ** 9);
 
   const { transaction } = await client.cpmm.swapWithOracle({
     poolInfo: info.poolInfo,
     poolKeys: info.poolKeys,
     zeroForOne: ZERO_FOR_ONE,
-    baseIn: BASE_IN,
     inputAmount: AMOUNT,
     swapResult,
     slippage: SLIPPAGE_BPS / 10_000,
@@ -56,7 +57,7 @@ async function mainFn(): Promise<void> {
       microLamports: MICRO_LAMPORTS,
     },
     txVersion: TxVersion.V0,
-    wrapSol: true,
+    wrapSol: false,
   });
 
   const { blockhash, lastValidBlockHeight } = await client.connection.getLatestBlockhash();
@@ -69,7 +70,7 @@ async function mainFn(): Promise<void> {
   ]);
 
   console.log("Sending swap transaction");
-  let signature = await new Connection(SEND_RPC_URL).sendTransaction(transaction as unknown as VersionedTransaction, {
+  const signature = await new Connection(SEND_RPC_URL).sendTransaction(transaction as unknown as VersionedTransaction, {
     skipPreflight: false,
     preflightCommitment: "confirmed",
     maxRetries: 0,
