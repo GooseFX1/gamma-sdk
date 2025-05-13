@@ -43,8 +43,6 @@ async function mainFn(): Promise<void> {
   );
   console.log("swapResult", swapResult);
 
-  console.log("swapResult, sourceAmountSwapped", swapResult.sourceAmountSwapped.toNumber());
-  console.log("swapResult destinationAmountSwapped", swapResult.destinationAmountSwapped.toNumber() / 10 ** 9);
 
   const { transaction } = await client.cpmm.swapWithOracle({
     poolInfo: info.poolInfo,
