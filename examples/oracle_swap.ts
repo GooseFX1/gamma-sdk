@@ -55,7 +55,7 @@ async function mainFn(): Promise<void> {
       microLamports: MICRO_LAMPORTS,
     },
     txVersion: TxVersion.V0,
-    wrapSol: false,
+    wrapSol: true,
   });
 
   const { blockhash, lastValidBlockHeight } = await client.connection.getLatestBlockhash();
