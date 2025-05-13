@@ -11,7 +11,7 @@ import { OracleBasedCurveCalculator } from "@/gfx/cpmm/curve/oracleCalculator";
 const RPC_URL = process.env.RPC_URL!;
 const SEND_RPC_URL = process.env.SEND_RPC_URL ?? RPC_URL;
 const KEYPAIR_PATH = process.env.KEYPAIR_PATH!;
-const AMOUNT = new BN(1_000_000);
+const AMOUNT = new BN(process.env.AMOUNT ?? '1_000_000');
 const POOL_STATE = new PublicKey(process.env.POOL!);
 const MICRO_LAMPORTS = parseInt(process.env.DEFAULT_CU_LAMPORTS ?? "500000");
 const SLIPPAGE_BPS = parseInt(process.env.SLIPPAGE_BPS ?? "1000");
