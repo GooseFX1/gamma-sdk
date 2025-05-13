@@ -11,23 +11,11 @@ export function checkedRem(dividend: BN, divisor: BN): BN {
 
 export function checkedCeilDiv(dividend: BN, rhs: BN): BN[] {
   if (rhs.isZero()) throw Error("rhs is zero");
-
-  let quotient = dividend.div(rhs);
-
-  if (quotient.isZero()) throw Error("quotient is zero");
-
-  let remainder = checkedRem(dividend, rhs);
-
-  if (remainder.gt(ZERO)) {
-    quotient = quotient.add(new BN(1));
-
-    rhs = dividend.div(quotient);
-    remainder = checkedRem(dividend, quotient);
-    if (remainder.gt(ZERO)) {
-      rhs = rhs.add(new BN(1));
-    }
-  }
-  return [quotient, rhs];
+  const quotient = dividend.div(rhs);
+  if (quotient.isZero()) return [quotient, rhs];
+  const remainder = dividend.sub(quotient.mul(rhs));
+  if (remainder.isZero()) return [quotient, rhs];
+  return [quotient.add(new BN(1)), rhs];
 }
 
 export function saturatingSub(a: BN, b: BN): BN {

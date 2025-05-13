@@ -85,12 +85,11 @@ export interface WithdrawCpmmLiquidityParams<T = TxVersion.LEGACY> {
   txVersion?: T;
 }
 
-export interface CpmmSwapParams<T = TxVersion.LEGACY> {
+export interface CpmmSwapWithOracleParams<T = TxVersion.LEGACY> {
   poolInfo: PoolInfo;
   poolKeys?: PoolKeys;
   payer?: PublicKey;
   zeroForOne: boolean;
-  baseIn?: boolean;
   slippage?: number;
   swapResult: Pick<SwapResult, "sourceAmountSwapped" | "destinationAmountSwapped">;
   inputAmount: BN;
@@ -111,6 +110,10 @@ export interface CpmmSwapParams<T = TxVersion.LEGACY> {
     referralAccount: PublicKey;
     referralTokenAccountWithInputMint: PublicKey;
   } | null;
+}
+
+export interface CpmmSwapParams<T = TxVersion.LEGACY> extends CpmmSwapWithOracleParams<T> {
+  baseIn?: boolean;
 }
 
 export interface ComputePairAmountParams {

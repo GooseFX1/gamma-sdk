@@ -49,8 +49,8 @@ export class OracleBasedCurveCalculator {
 
     const spotPrice = swapDestinationAmount.mul(D9).div(swapSourceAmount);
     const oraclePrice = zeroForOne
-      ? poolState.oraclePriceToken0ByToken1
-      : D9_SQUARED.div(poolState.oraclePriceToken0ByToken1);
+      ? D9_SQUARED.div(poolState.oraclePriceToken0ByToken1)
+      : poolState.oraclePriceToken0ByToken1;
     const rateDifference = OracleBasedCurveCalculator.getSpotPriceAndOraclePriceRateDifference(oraclePrice, spotPrice);
     if (rateDifference.gtn(poolState.acceptablePriceDifference)) {
       return CurveCalculator.swap(
@@ -109,7 +109,7 @@ export class OracleBasedCurveCalculator {
 
     const outputTokensFromOracleSwap = executionOraclePrice.mul(oracleSwapSourceAmountAfterFees).div(D9);
 
-    const newSwapSourceAmount = swapSourceAmount.sub(amountToBeSwappedAtOraclePrice);
+    const newSwapSourceAmount = swapSourceAmount.add(amountToBeSwappedAtOraclePrice);
     const newSwapDestinationAmount = swapDestinationAmount.sub(outputTokensFromOracleSwap);
 
     const invariantSwapTradeFees = checkedCeilDiv(
@@ -117,14 +117,17 @@ export class OracleBasedCurveCalculator {
       FEE_RATE_DENOMINATOR_VALUE,
     )[0];
 
-    const sourceAmountAfterFees = amountToBeSwappedWithInvariantCurve.sub(invariantSwapTradeFees);
-    const outputTokensFromInvariantSwap = ConstantProductCurve.swapWithoutFees(
-      sourceAmountAfterFees,
-      newSwapSourceAmount,
-      newSwapDestinationAmount,
-    ).destinationAmountSwapped;
+    const sourceAmountAfterFees = saturatingSub(amountToBeSwappedWithInvariantCurve, invariantSwapTradeFees);
+    let outputTokensFromInvariantSwap = new BN(0);
+    if (!sourceAmountAfterFees.isZero()) {
+      outputTokensFromInvariantSwap = ConstantProductCurve.swapWithoutFees(
+        sourceAmountAfterFees,
+        newSwapSourceAmount,
+        newSwapDestinationAmount,
+      ).destinationAmountSwapped;
+    }
 
-    const destinationAmountSwapped = outputTokensFromOracleSwap.sub(outputTokensFromInvariantSwap);
+    const destinationAmountSwapped = outputTokensFromOracleSwap.add(outputTokensFromInvariantSwap);
     return {
       newSwapSourceAmount: swapSourceAmount.add(sourceAmount),
       newSwapDestinationAmount: swapDestinationAmount.sub(destinationAmountSwapped),
@@ -153,14 +156,12 @@ export class OracleBasedCurveCalculator {
     // x_delta_max = (|(Z*X) - Y)| / (Z + P)
     const numerator = spotPriceAtAcceptablePriceDifferenceLimit
       .mul(swapSourceAmount)
-      .sub(swapDestinationAmount.mul(D9));
-    const denominator = oraclePrice.add(spotPriceAtAcceptablePriceDifferenceLimit);
-    let maxSwappableWithoutExceedingPriceDifference = spotPriceAtAcceptablePriceDifferenceLimit
-      .mul(swapSourceAmount)
       .sub(swapDestinationAmount.mul(D9))
-      .div(oraclePrice.add(spotPriceAtAcceptablePriceDifferenceLimit));
+      .abs();
+    const denominator = oraclePrice.add(spotPriceAtAcceptablePriceDifferenceLimit);
+    const maxSwappableWithoutExceedingPriceDifference = numerator.div(denominator);
 
-    let min = maxSwappableWithoutExceedingPriceDifference.gt(maxAmountSwappableAtOraclePrice)
+    const min = maxSwappableWithoutExceedingPriceDifference.gt(maxAmountSwappableAtOraclePrice)
       ? maxAmountSwappableAtOraclePrice
       : maxSwappableWithoutExceedingPriceDifference;
     return min.gt(sourceAmountToBeSwapped) ? sourceAmountToBeSwapped : min;
