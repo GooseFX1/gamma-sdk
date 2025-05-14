@@ -1,6 +1,6 @@
 {
   "name": "goosefx-amm-sdk",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "SDK for the GooseFx AMM",
   "license": "GPL-3.0",
   "main": "./lib/index.js",

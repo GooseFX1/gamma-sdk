@@ -1,3 +1,11 @@
+## [1.2.1](https://github.com/GooseFX1/gamma-sdk/compare/v1.2.0...v1.2.1) (2025-05-14)
+
+
+### Bug Fixes
+
+* issues in oracle based swap calcualtor ([064c06f](https://github.com/GooseFX1/gamma-sdk/commit/064c06f89023bf62555985640e2d6ebaaa2b9515))
+* maths ([3f5ed37](https://github.com/GooseFX1/gamma-sdk/commit/3f5ed37d15051156c82ea584e1d3ad063bc58202))
+
 # [1.2.0](https://github.com/GooseFX1/gamma-sdk/compare/v1.1.0...v1.2.0) (2025-04-09)
 
 
