@@ -1,21 +1,21 @@
 import dotenv from "dotenv";
 dotenv.config();
-import { CurveCalculator, GfxCpmmClient } from "../src/gfx/index";
+import { GfxCpmmClient } from "../src/gfx/index";
 import fs from "fs";
 import BN from "bn.js";
 
 import { Connection, Keypair, PublicKey, VersionedTransaction } from "@solana/web3.js";
 import { TxVersion } from "@/common";
+import { OracleBasedCurveCalculator } from "@/gfx/cpmm/curve/oracleCalculator";
 
 const RPC_URL = process.env.RPC_URL!;
 const SEND_RPC_URL = process.env.SEND_RPC_URL ?? RPC_URL;
 const KEYPAIR_PATH = process.env.KEYPAIR_PATH!;
-const AMOUNT = new BN(parseInt(process.env.AMOUNT!));
+const AMOUNT = new BN(process.env.AMOUNT ?? '1_000_000');
 const POOL_STATE = new PublicKey(process.env.POOL!);
 const MICRO_LAMPORTS = parseInt(process.env.DEFAULT_CU_LAMPORTS ?? "500000");
 const SLIPPAGE_BPS = parseInt(process.env.SLIPPAGE_BPS ?? "1000");
-const ZERO_FOR_ONE = process.env.ZERO_FOR_ONE ? process.env.ZERO_FOR_ONE.toLowerCase() === "true" : true;
-const BASE_IN = process.env.BASE_IN ? process.env.BASE_IN.toLowerCase() === "true" : undefined;
+const ZERO_FOR_ONE = false;
 
 async function mainFn(): Promise<void> {
   const keypair = createKeypairFromFile(KEYPAIR_PATH);
@@ -32,21 +32,22 @@ async function mainFn(): Promise<void> {
   const info = await client.cpmm.getPoolInfoFromRpc(POOL_STATE.toBase58());
   const observationState = await client.cpmm.getObservationStates([info.rpcData.observationKey]).then((res) => res[0]);
 
-  const swapResult = CurveCalculator.swap(
+  const swapResult = OracleBasedCurveCalculator.swap(
     AMOUNT,
-    ZERO_FOR_ONE ? info.rpcData.baseReserve : info.rpcData.quoteReserve,
-    ZERO_FOR_ONE ? info.rpcData.quoteReserve : info.rpcData.baseReserve,
+    ZERO_FOR_ONE,
+    info.rpcData.baseReserve,
+    info.rpcData.quoteReserve,
     info.rpcData.configInfo!.tradeFeeRate,
     observationState!,
-    info.rpcData.volatilityFactor,
+    info.rpcData,
   );
-  console.log(`swapResult: `, swapResult)
+  console.log("swapResult", swapResult);
 
-  const { transaction } = await client.cpmm.swap({
+
+  const { transaction } = await client.cpmm.swapWithOracle({
     poolInfo: info.poolInfo,
     poolKeys: info.poolKeys,
     zeroForOne: ZERO_FOR_ONE,
-    baseIn: BASE_IN,
     inputAmount: AMOUNT,
     swapResult,
     slippage: SLIPPAGE_BPS / 10_000,
@@ -67,8 +68,8 @@ async function mainFn(): Promise<void> {
   ]);
 
   console.log("Sending swap transaction");
-  let signature = await new Connection(SEND_RPC_URL).sendTransaction(transaction as unknown as VersionedTransaction, {
-    skipPreflight: true,
+  const signature = await new Connection(SEND_RPC_URL).sendTransaction(transaction as unknown as VersionedTransaction, {
+    skipPreflight: false,
     preflightCommitment: "confirmed",
     maxRetries: 0,
   });

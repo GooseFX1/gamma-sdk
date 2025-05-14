@@ -1,6 +1,7 @@
 import BN from "bn.js";
 import { CpmmObservationState, CpmmObservation } from "../type";
 import Decimal from "decimal.js-light";
+import { checkedCeilDiv, saturatingSub } from "./common";
 
 export const ONE_BASIS_POINT = new BN(100);
 export const FEE_RATE_DENOMINATOR_VALUE = new BN(1_000_000);
@@ -10,7 +11,7 @@ const OBSERVATION_LEN = 100;
 const VOLATILITY_WINDOW = new BN(3600); // 1 hour window for volatility calculation
 
 const MAX_FEE = new BN(100000); // 10% max fee
-const VOLATILITY_FACTOR = new BN(300000); // Adjust based on desired sensitivity
+const DEFAULT_VOLATILITY_FACTOR = new BN(300000); // Adjust based on desired sensitivity
 
 type PriceRange = {
   minPrice: BN;
@@ -27,6 +28,7 @@ export class DynamicFee {
     observationState: CpmmObservationState,
     feeType: FeeType,
     baseFees: BN,
+    poolVolatilityFactor: BN,
     isInvokedWithSignedSegmenter: boolean,
   ): BN {
     let feeRate = this.calculateDynamicFeeRate(
@@ -34,10 +36,12 @@ export class DynamicFee {
       observationState,
       feeType,
       baseFees,
+      poolVolatilityFactor,
       isInvokedWithSignedSegmenter,
     );
 
-    return amount.mul(feeRate).add(FEE_RATE_DENOMINATOR_VALUE).subn(1).div(FEE_RATE_DENOMINATOR_VALUE);
+    const [dynamicFee, _feeRateDenominator] = checkedCeilDiv(amount.mul(feeRate), FEE_RATE_DENOMINATOR_VALUE);
+    return dynamicFee;
   }
 
   static calculateDynamicFeeRate(
@@ -45,11 +49,18 @@ export class DynamicFee {
     observationState: CpmmObservationState,
     feeType: FeeType,
     baseFees: BN,
+    poolVolatilityFactor: BN,
     isInvokedWithSignedSegmenter: boolean,
   ): BN {
     switch (feeType) {
       case "volatility": {
-        return this.calculateVolatileFee(blockTimestamp, observationState, baseFees, isInvokedWithSignedSegmenter);
+        return this.calculateVolatileFee(
+          blockTimestamp,
+          observationState,
+          baseFees,
+          poolVolatilityFactor,
+          isInvokedWithSignedSegmenter,
+        );
       }
     }
   }
@@ -58,6 +69,7 @@ export class DynamicFee {
     blockTimestamp: BN,
     observationState: CpmmObservationState,
     baseFees: BN,
+    poolSpecifiedVolatilityFactor: BN,
     isInvokedWithSignedSegmenter: boolean,
   ): BN {
     const { minPrice, maxPrice, twapPrice } = this.getPriceRange(observationState, blockTimestamp, VOLATILITY_WINDOW);
@@ -77,7 +89,10 @@ export class DynamicFee {
     }
 
     const volatility = numerator.div(denominator);
-    const volatilityComponent = new Decimal(VOLATILITY_FACTOR.toString()).mul(volatility);
+    const volatilityFactor = poolSpecifiedVolatilityFactor.eqn(0)
+      ? DEFAULT_VOLATILITY_FACTOR
+      : poolSpecifiedVolatilityFactor;
+    const volatilityComponent = new Decimal(volatilityFactor.toString()).mul(volatility);
 
     const dynamicFee = new Decimal(baseFees.toString()).add(volatilityComponent);
     const finalFee = new BN(
@@ -180,6 +195,7 @@ export class DynamicFee {
     observationState: CpmmObservationState,
     feeType: FeeType,
     baseFees: BN,
+    poolVolatilityFactor: BN,
     isInvokedWithSignedSegmenter: boolean,
   ): BN {
     const dynamicFeeRate = this.calculateDynamicFeeRate(
@@ -187,6 +203,7 @@ export class DynamicFee {
       observationState,
       feeType,
       baseFees,
+      poolVolatilityFactor,
       isInvokedWithSignedSegmenter,
     );
     if (dynamicFeeRate.eqn(0)) {
@@ -198,8 +215,4 @@ export class DynamicFee {
       return numerator.add(denominator).subn(1).div(denominator);
     }
   }
-}
-
-function saturatingSub(a: BN, b: BN): BN {
-  return a > b ? a.sub(b) : new BN(0);
 }

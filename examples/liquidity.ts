@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
-import { GfxCpmmClient, PartnerType } from "../src/gfx/index";
+import { GfxCpmmClient } from "../src/gfx/index";
 import fs from "fs";
 import BN from "bn.js";
 
@@ -44,48 +44,47 @@ async function mainFn(): Promise<void> {
     epochInfo: await client.connection.getEpochInfo(),
   });
 
-  let { transaction: addTxn } = await client.cpmm.addLiquidity({
-    poolInfo: info.poolInfo,
-    poolKeys: info.poolKeys,
-    payer: keypair.publicKey,
-    inputAmount: new BN(AMOUNT),
-    baseIn: BASE_IN,
-    slippage,
-    computeResult: compute,
-    computeBudgetConfig: {
-      microLamports: MICRO_LAMPORTS,
-    },
-    txVersion: TxVersion.V0,
-    partner: PartnerType.AssetDash,
-  });
+  // let { transaction: addTxn } = await client.cpmm.addLiquidity({
+  //   poolInfo: info.poolInfo,
+  //   poolKeys: info.poolKeys,
+  //   payer: keypair.publicKey,
+  //   inputAmount: new BN(AMOUNT),
+  //   baseIn: BASE_IN,
+  //   slippage,
+  //   computeResult: compute,
+  //   computeBudgetConfig: {
+  //     microLamports: MICRO_LAMPORTS,
+  //   },
+  //   txVersion: TxVersion.V0,
+  // });
 
   let latestBlockhash = await client.connection.getLatestBlockhash();
-  addTxn.message.recentBlockhash = latestBlockhash.blockhash;
-  addTxn.sign([
-    {
-      publicKey: keypair.publicKey,
-      secretKey: keypair.secretKey,
-    },
-  ]);
+  // addTxn.message.recentBlockhash = latestBlockhash.blockhash;
+  // addTxn.sign([
+  //   {
+  //     publicKey: keypair.publicKey,
+  //     secretKey: keypair.secretKey,
+  //   },
+  // ]);
 
   const sendConnection = new Connection(SEND_RPC_URL);
-  console.log("Sending addLiquidity transaction");
-  let signature = await sendConnection.sendTransaction(addTxn as unknown as VersionedTransaction, {
-    skipPreflight: true,
-    preflightCommitment: "confirmed",
-    maxRetries: 0,
-  });
-  console.log(`Waiting to confirm transaction ${signature}`);
+  // console.log("Sending addLiquidity transaction");
+  // let signature = await sendConnection.sendTransaction(addTxn as unknown as VersionedTransaction, {
+  //   skipPreflight: true,
+  //   preflightCommitment: "confirmed",
+  //   maxRetries: 0,
+  // });
+  // console.log(`Waiting to confirm transaction ${signature}`);
 
-  await client.connection.confirmTransaction(
-    {
-      signature,
-      blockhash: latestBlockhash.blockhash,
-      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-    },
-    "confirmed",
-  );
-  console.log(`addLiquidity txn confirmed. View at https://solscan.io/tx/${signature}`);
+  // await client.connection.confirmTransaction(
+  //   {
+  //     signature,
+  //     blockhash: latestBlockhash.blockhash,
+  //     lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+  //   },
+  //   "confirmed",
+  // );
+  // console.log(`addLiquidity txn confirmed. View at https://solscan.io/tx/${signature}`);
 
   latestBlockhash = await client.connection.getLatestBlockhash();
   let { transaction: withdrawTxn } = await client.cpmm.withdrawLiquidity({
@@ -108,8 +107,8 @@ async function mainFn(): Promise<void> {
   ]);
 
   console.log("Sending removeLiquidity transaction");
-  signature = await sendConnection.sendTransaction(withdrawTxn as unknown as VersionedTransaction, {
-    skipPreflight: true,
+  let signature = await sendConnection.sendTransaction(withdrawTxn as unknown as VersionedTransaction, {
+    skipPreflight: false,
     preflightCommitment: "confirmed",
     maxRetries: 0,
   });

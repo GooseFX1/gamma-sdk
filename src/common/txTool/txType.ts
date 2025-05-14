@@ -21,4 +21,5 @@ export const InstructionType = {
   CpmmWithdrawLiquidity: "CpmmWithdrawLiquidity",
   CpmmSwapBaseIn: "CpmmSwapBaseIn",
   CpmmSwapBaseOut: "CpmmSwapBaseOut",
+  CpmmOracleSwapBaseIn: "CpmmOracleSwapBaseIn",
 };

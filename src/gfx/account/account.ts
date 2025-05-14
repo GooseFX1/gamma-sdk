@@ -17,6 +17,7 @@ import {
 } from "./instruction";
 import { HandleTokenAccountParams, TokenAccount, TokenAccountRaw, GetOrCreateTokenAccountParams } from "./types";
 import { parseTokenAccountResp, generatePubKey } from "./util";
+import BN from "bn.js";
 
 export interface TokenAccountDataProp {
   tokenAccounts?: TokenAccount[];
@@ -174,7 +175,7 @@ export default class Account extends ModuleBase {
     const ata = this.getAssociatedTokenAccount(mint, new PublicKey(tokenProgram));
     const accounts = (notUseTokenAccount ? [] : this.tokenAccountRawInfos)
       .filter((i) => i.accountInfo.mint.equals(mint) && (!associatedOnly || i.pubkey.equals(ata)))
-      .sort((a, b) => (a.accountInfo.amount.lt(b.accountInfo.amount) ? 1 : -1));
+      .sort((a, b) => (new BN(a.accountInfo.amount.toString()).lt(new BN(b.accountInfo.amount.toString())) ? 1 : -1));
     // find token or don't need create
     if (createInfo === undefined || accounts.length > 0) {
       return accounts.length > 0 ? { account: accounts[0].pubkey } : {};

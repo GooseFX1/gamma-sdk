@@ -85,7 +85,7 @@ async function mainFn(): Promise<void> {
 
   console.log("Sending createPool transaction");
   const signature = await new Connection(SEND_RPC_URL).sendTransaction(transaction as unknown as VersionedTransaction, {
-    skipPreflight: true,
+    skipPreflight: false,
     preflightCommitment: "confirmed",
     maxRetries: 0,
   });
