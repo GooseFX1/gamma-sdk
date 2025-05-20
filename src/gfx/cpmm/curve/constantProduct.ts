@@ -19,6 +19,37 @@ export class ConstantProductCurve {
     };
   }
 
+  static swapWithoutFeesBaseOut(
+    destinationAmount: BN,
+    swapSourceAmount: BN,
+    swapDestinationAmount: BN,
+  ): SwapWithoutFeesResult {
+    // Ensure inputs are valid
+    if (destinationAmount.isZero()) {
+      throw new Error("destinationAmount is zero");
+    }
+    if (destinationAmount.gt(swapDestinationAmount)) {
+      throw new Error("destinationAmount exceeds available destination reserve");
+    }
+
+    // Numerator: x * Δy
+    const numerator = swapSourceAmount.mul(destinationAmount);
+    // Denominator: y - Δy
+    const denominator = swapDestinationAmount.sub(destinationAmount);
+
+    if (denominator.isZero()) {
+      throw new Error("denominator is zero");
+    }
+
+    // Ceiling division: Δx = ceil((x * Δy) / (y - Δy))
+    const [sourceAmountSwapped] = checkedCeilDiv(numerator, denominator);
+
+    return {
+      sourceAmountSwapped,
+      destinationAmountSwapped: destinationAmount,
+    };
+  }
+
   static lpTokensToTradingTokens(
     lpTokenAmount: BN,
     lpTokenSupply: BN,

@@ -36,7 +36,7 @@ export class OracleBasedCurveCalculator {
       oraclePriceUpdatedAt.eqn(0) ||
       poolState.oraclePriceToken0ByToken1.eqn(0)
     ) {
-      return CurveCalculator.swap(
+      return CurveCalculator.swapBaseIn(
         sourceAmount,
         swapSourceAmount,
         swapDestinationAmount,
@@ -53,7 +53,7 @@ export class OracleBasedCurveCalculator {
       : poolState.oraclePriceToken0ByToken1;
     const rateDifference = OracleBasedCurveCalculator.getSpotPriceAndOraclePriceRateDifference(oraclePrice, spotPrice);
     if (rateDifference.gtn(poolState.acceptablePriceDifference)) {
-      return CurveCalculator.swap(
+      return CurveCalculator.swapBaseIn(
         sourceAmount,
         swapSourceAmount,
         swapDestinationAmount,
@@ -74,7 +74,7 @@ export class OracleBasedCurveCalculator {
     const amountToBeSwappedWithInvariantCurve = sourceAmount.sub(amountToBeSwappedAtOraclePrice);
 
     if (amountToBeSwappedAtOraclePrice.eqn(0)) {
-      return CurveCalculator.swap(
+      return CurveCalculator.swapBaseIn(
         sourceAmount,
         swapSourceAmount,
         swapDestinationAmount,

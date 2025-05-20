@@ -147,7 +147,8 @@ export type CpmmRpcData = CpmmPool & {
   vaultAAmount: BN;
   vaultBAmount: BN;
   configInfo?: CpmmConfig;
-  partnerInfo?: CpmmPoolPartners;
+  partnerInfo: CpmmPoolPartners;
+  observationAccount: CpmmObservationState;
   poolPrice: Decimal;
   programId: PublicKey;
 };

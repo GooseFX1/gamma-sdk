@@ -1,11 +1,8 @@
-import { AccountMeta, PublicKey, SystemProgram } from "@solana/web3.js";
+import { PublicKey, SystemProgram } from "@solana/web3.js";
 import {
   NATIVE_MINT,
   TOKEN_PROGRAM_ID,
-  createCloseAccountInstruction,
   createSyncNativeInstruction,
-  createTransferCheckedInstruction,
-  createTransferInstruction,
 } from "@solana/spl-token";
 import { PoolInfo, PoolKeys, PoolStats } from "@/api/type";
 import { Percent } from "@/module";
@@ -50,7 +47,7 @@ import { ComputeBudgetConfig, GetTransferAmountFee, ReturnTypeFetchMultipleMintI
 import { toGammaApiToken, toFeeConfig, SOL_INFO } from "../token";
 import { getPdaPoolAuthority } from "./pda";
 import { ConstantProductCurve } from "./curve/constantProduct";
-import { Idl, Program } from "@coral-xyz/anchor";
+import { Program } from "@coral-xyz/anchor";
 import { Gamma } from "../idl/gamma.type";
 import { getReserveAccountsForWithdraw, getReservesForMarket, KaminoReserve } from "./kamino";
 
@@ -152,12 +149,20 @@ export default class CpmmModule extends ModuleBase {
   ): Promise<{
     [poolId: string]: CpmmRpcData;
   }> {
-    const accounts = await this.program.account.poolState.fetchMultiple(poolIds);
     const partnerIds = poolIds.map((id) => getPdaPoolPartners(this.program.programId, new PublicKey(id)).publicKey);
-    const partnerInfos = await this.program.account.poolPartnerInfos.fetchMultiple(partnerIds);
+    const observationIds = poolIds.map(
+      (id) => getPdaObservationId(this.program.programId, new PublicKey(id)).publicKey,
+    );
+
+    const [accounts, partnerInfos, observations] = await Promise.all([
+      this.program.account.poolState.fetchMultiple(poolIds),
+      this.program.account.poolPartnerInfos.fetchMultiple(partnerIds),
+      this.program.account.observationState.fetchMultiple(observationIds),
+    ]);
 
     const poolInfos: {
       [poolId: string]: CpmmPool & {
+        observationAccount: CpmmObservationState;
         partnerInfo: CpmmPoolPartners;
         programId: PublicKey;
       };
@@ -168,12 +173,15 @@ export default class CpmmModule extends ModuleBase {
     for (let i = 0; i < poolIds.length; i++) {
       const rpc = accounts[i];
       const partnerInfo = partnerInfos[i];
+      const observationAccount = observations[i];
       if (rpc === null) throw Error("fetch pool info error: " + String(poolIds[i]));
-      if (partnerInfo === null) throw Error("fetch poolPartners info error: " + partnerIds[i]);
+      if (partnerInfo === null) throw Error("failed to fetch poolPartners for pool: " + poolIds[i]);
+      if (observationAccount === null) throw Error("failed to fetch observation for pool: " + poolIds[i]);
 
       poolInfos[String(poolIds[i])] = {
         ...rpc,
         partnerInfo,
+        observationAccount,
         programId: this.program.programId,
       };
       needFetchConfigId.add(String(rpc.ammConfig));
@@ -651,7 +659,7 @@ export default class CpmmModule extends ModuleBase {
     let tokenAReserve: KaminoReserve | undefined = this.reserves.get(poolInfo.mintA.address);
     let tokenBReserve: KaminoReserve | undefined = this.reserves.get(poolInfo.mintB.address);
     if (!tokenAReserve || !tokenBReserve) {
-      this.reserves = await getReservesForMarket(this.program.provider);
+      this.reserves = await getReservesForMarket(this.program.provider.connection);
       tokenAReserve = this.reserves.get(poolInfo.mintA.address);
       tokenBReserve = this.reserves.get(poolInfo.mintB.address);
     }
@@ -1072,7 +1080,7 @@ export default class CpmmModule extends ModuleBase {
   } {
     const baseIn = outputMint.toString() === pool.mintB.address;
 
-    const swapResult = CurveCalculator.swap(
+    const swapResult = CurveCalculator.swapBaseIn(
       amountIn,
       baseIn ? pool.baseReserve : pool.quoteReserve,
       baseIn ? pool.quoteReserve : pool.baseReserve,

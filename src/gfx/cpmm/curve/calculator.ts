@@ -26,7 +26,7 @@ static validate_supply(tokenAmount0: BN, tokenAmount1: BN): void {
     if (tokenAmount1.isZero()) throw Error("tokenAmount1 is zero");
   }
 
-  static swap(
+  static swapBaseIn(
     sourceAmount: BN,
     swapSourceAmount: BN,
     swapDestinationAmount: BN,
@@ -60,6 +60,44 @@ static validate_supply(tokenAmount0: BN, tokenAmount1: BN): void {
       sourceAmountSwapped: _sourceAmountSwapped,
       destinationAmountSwapped,
       tradeFee,
+    };
+  }
+
+  static swapBaseOut(
+    destinationAmount: BN,
+    swapSourceAmount: BN,
+    swapDestinationAmount: BN,
+    tradeFeeRate: BN,
+    observationState: CpmmObservationState,
+    poolVolatilityFactor: BN,
+    isInvokedWithSignedSegmenter = false,
+  ): SwapResult {
+    // Validate inputs
+    if (destinationAmount.isZero()) throw new Error("destinationAmount is zero");
+    if (destinationAmount.gt(swapDestinationAmount)) {
+      throw new Error("destinationAmount exceeds available destination reserve");
+    }
+
+    // Calculate source amount without fees
+    const { sourceAmountSwapped: sourceAmountLessFees, destinationAmountSwapped } =
+      ConstantProductCurve.swapWithoutFeesBaseOut(destinationAmount, swapSourceAmount, swapDestinationAmount);
+
+    const sourceAmount = DynamicFee.calculatePreDynamicFee(
+      sourceAmountLessFees,
+      new BN(new Date().getTime() / 1000),
+      observationState,
+      "volatility",
+      tradeFeeRate,
+      poolVolatilityFactor,
+      isInvokedWithSignedSegmenter,
+    );
+
+    return {
+      newSwapSourceAmount: swapSourceAmount.add(sourceAmount),
+      newSwapDestinationAmount: swapDestinationAmount.sub(destinationAmountSwapped),
+      sourceAmountSwapped: sourceAmount,
+      destinationAmountSwapped,
+      tradeFee: sourceAmount.sub(sourceAmountLessFees),
     };
   }
 }
