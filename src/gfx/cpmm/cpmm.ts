@@ -1,9 +1,5 @@
 import { PublicKey, SystemProgram } from "@solana/web3.js";
-import {
-  NATIVE_MINT,
-  TOKEN_PROGRAM_ID,
-  createSyncNativeInstruction,
-} from "@solana/spl-token";
+import { NATIVE_MINT, TOKEN_PROGRAM_ID, createSyncNativeInstruction } from "@solana/spl-token";
 import { PoolInfo, PoolKeys, PoolStats } from "@/api/type";
 import { Percent } from "@/module";
 import { BN_ZERO } from "@/common/number";
@@ -465,11 +461,6 @@ export default class CpmmModule extends ModuleBase {
       mintA: mintAPubkey,
       mintB: mintBPubkey,
     });
-    const userLiquidityPda = getPdaUserLiquidity(
-      new PublicKey(programId),
-      new PublicKey(poolKeys.poolId),
-      this.scope.ownerPubKey,
-    );
 
     txBuilder.addInstruction({
       instructions: [
@@ -778,7 +769,6 @@ export default class CpmmModule extends ModuleBase {
       poolKeys: propPoolKeys,
       zeroForOne,
       baseIn,
-      inputAmount,
       swapResult,
       slippage = 0,
       config,
@@ -893,7 +883,7 @@ export default class CpmmModule extends ModuleBase {
               zeroForOne ? mintB : mintA,
               getPdaObservationId(new PublicKey(poolInfo.programId), new PublicKey(poolInfo.id)).publicKey,
 
-              inputAmount,
+              swapResult.sourceAmountSwapped,
               swapResult.destinationAmountSwapped,
               params.dflowSegmenterOptions,
               params.referralAccounts,
@@ -935,7 +925,6 @@ export default class CpmmModule extends ModuleBase {
       poolInfo,
       poolKeys: propPoolKeys,
       zeroForOne,
-      inputAmount,
       swapResult,
       slippage = 0,
       config,
@@ -1043,7 +1032,7 @@ export default class CpmmModule extends ModuleBase {
           zeroForOne ? mintB : mintA,
           getPdaObservationId(new PublicKey(poolInfo.programId), new PublicKey(poolInfo.id)).publicKey,
 
-          inputAmount,
+          swapResult.sourceAmountSwapped,
           swapResult.destinationAmountSwapped,
           params.dflowSegmenterOptions,
           params.referralAccounts,
@@ -1059,14 +1048,16 @@ export default class CpmmModule extends ModuleBase {
 
   public computeSwapAmount({
     pool,
-    amountIn,
-    outputMint,
+    amount,
+    baseIn,
+    zeroForOne,
     slippage,
     observationState,
   }: {
     pool: CpmmComputeData;
-    amountIn: BN;
-    outputMint: string | PublicKey;
+    amount: BN;
+    baseIn: boolean;
+    zeroForOne: boolean;
     slippage: number;
     observationState: CpmmObservationState;
   }): {
@@ -1074,36 +1065,53 @@ export default class CpmmModule extends ModuleBase {
     amountIn: BN;
     amountOut: BN;
     minAmountOut: BN;
+    maxAmountIn: BN;
     fee: BN;
     executionPrice: Decimal;
-    priceImpact: any;
+    priceImpact: Decimal;
   } {
-    const baseIn = outputMint.toString() === pool.mintB.address;
+    const [inputToken, outputToken, inputTokenReserves, outputTokenReserves] = zeroForOne
+      ? [pool.mintA, pool.mintB, pool.baseReserve, pool.quoteReserve]
+      : [pool.mintB, pool.mintA, pool.quoteReserve, pool.baseReserve];
 
-    const swapResult = CurveCalculator.swapBaseIn(
-      amountIn,
-      baseIn ? pool.baseReserve : pool.quoteReserve,
-      baseIn ? pool.quoteReserve : pool.baseReserve,
-      pool.configInfo.tradeFeeRate,
-      observationState,
-      pool.volatilityFactor,
+    const inputDecimals = inputToken.decimals;
+    const outputDecimals = outputToken.decimals;
+
+    const swapResult = baseIn
+      ? CurveCalculator.swapBaseIn(
+          amount,
+          new BN(inputTokenReserves),
+          new BN(outputTokenReserves),
+          new BN(pool.configInfo.tradeFeeRate),
+          observationState,
+          pool.volatilityFactor,
+        )
+      : CurveCalculator.swapBaseOut(
+          amount,
+          new BN(inputTokenReserves),
+          new BN(outputTokenReserves),
+          new BN(pool.configInfo.tradeFeeRate),
+          observationState,
+          pool.volatilityFactor,
+        );
+
+    const currentPrice = zeroForOne ? pool.poolPrice : new Decimal(1).div(pool.poolPrice);
+    const numerator = new Decimal(swapResult.destinationAmountSwapped.toString()).div(
+      new Decimal(10).pow(inputDecimals),
     );
-
-    const currentPrice = baseIn ? pool.poolPrice : new Decimal(1).div(pool.poolPrice);
-    const [numDecimals, denomDecimals] = baseIn
-      ? [pool.mintB.decimals, pool.mintA.decimals]
-      : [pool.mintA.decimals, pool.mintB.decimals];
-    const numerator = new Decimal(swapResult.destinationAmountSwapped.toString()).div(new Decimal(10).pow(numDecimals));
-    const denominator = new Decimal(swapResult.sourceAmountSwapped.toString()).div(new Decimal(10).pow(denomDecimals));
+    const denominator = new Decimal(swapResult.sourceAmountSwapped.toString()).div(new Decimal(10).pow(outputDecimals));
     const executionPrice = numerator.div(denominator);
 
-    const minAmountOut = swapResult.destinationAmountSwapped.mul(new BN((1 - slippage) * 10000)).div(new BN(10000));
+    const otherAmountThreshold = baseIn
+      ? swapResult.destinationAmountSwapped.mul(new BN((1 - slippage) * 10000)).div(new BN(10000))
+      : swapResult.sourceAmountSwapped.mul(new BN((1 + slippage) * 10000)).div(new BN(10000));
 
     return {
-      allTrade: swapResult.sourceAmountSwapped.eq(amountIn),
-      amountIn,
+      allTrade: baseIn ? swapResult.sourceAmountSwapped.eq(amount) : swapResult.destinationAmountSwapped.eq(amount),
+      amountIn: swapResult.sourceAmountSwapped,
       amountOut: swapResult.destinationAmountSwapped,
-      minAmountOut,
+      maxAmountIn: baseIn ? swapResult.sourceAmountSwapped : otherAmountThreshold,
+      minAmountOut: baseIn ? otherAmountThreshold : swapResult.destinationAmountSwapped,
       executionPrice,
       fee: swapResult.tradeFee,
       priceImpact: currentPrice.sub(executionPrice).div(currentPrice),

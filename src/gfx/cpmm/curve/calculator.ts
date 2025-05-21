@@ -21,7 +21,7 @@ export type SwapResult = {
 };
 
 export class CurveCalculator {
-static validate_supply(tokenAmount0: BN, tokenAmount1: BN): void {
+  static validate_supply(tokenAmount0: BN, tokenAmount1: BN): void {
     if (tokenAmount0.isZero()) throw Error("tokenAmount0 is zero");
     if (tokenAmount1.isZero()) throw Error("tokenAmount1 is zero");
   }

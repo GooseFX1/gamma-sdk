@@ -92,7 +92,6 @@ export interface CpmmSwapWithOracleParams<T = TxVersion.LEGACY> {
   zeroForOne: boolean;
   slippage?: number;
   swapResult: Pick<SwapResult, "sourceAmountSwapped" | "destinationAmountSwapped">;
-  inputAmount: BN;
 
   config?: {
     bypassAssociatedCheck?: boolean;
