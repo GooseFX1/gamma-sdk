@@ -58,7 +58,7 @@ export interface AddCpmmLiquidityParams<T = TxVersion.LEGACY> {
   poolKeys?: PoolKeys;
   payer?: PublicKey;
   inputAmount: BN;
-  baseIn: boolean;
+  zeroForOne: boolean;
   slippage: Percent;
   config?: {
     bypassAssociatedCheck?: boolean;
@@ -122,7 +122,7 @@ export interface ComputePairAmountParams {
   amount: string | Decimal;
   slippage: Percent;
   epochInfo: EpochInfo;
-  baseIn?: boolean;
+  zeroForOne?: boolean;
 }
 
 export type CpmmObservationState = IdlAccounts<Gamma>["observationState"];

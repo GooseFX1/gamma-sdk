@@ -16,7 +16,7 @@ const AMOUNT = process.env.AMOUNT!;
 const POOL_STATE = new PublicKey(process.env.POOL!);
 const MICRO_LAMPORTS = parseInt(process.env.DEFAULT_CU_LAMPORTS ?? "1200000");
 const SLIPPAGE_BPS = parseInt(process.env.SLIPPAGE_BPS ?? "1000");
-const BASE_IN = process.env.BASE_IN === undefined ? true : process.env.BASE_IN === "true";
+const ZERO_FOR_ONE = process.env.ZERO_FOR_ONE === undefined ? true : process.env.ZERO_FOR_ONE === "true";
 
 async function mainFn(): Promise<void> {
   const keypair = createKeypairFromFile(KEYPAIR_PATH);
@@ -37,9 +37,9 @@ async function mainFn(): Promise<void> {
     baseReserve: info.rpcData.baseReserve,
     quoteReserve: info.rpcData.quoteReserve,
     slippage,
-    baseIn: BASE_IN,
+    zeroForOne: ZERO_FOR_ONE,
     amount: new Decimal(AMOUNT.toString())
-      .div(10 ** (BASE_IN ? info.poolInfo.mintA.decimals : info.poolInfo.mintB.decimals))
+      .div(10 ** (ZERO_FOR_ONE ? info.poolInfo.mintA.decimals : info.poolInfo.mintB.decimals))
       .toString(),
     epochInfo: await client.connection.getEpochInfo(),
   });
@@ -49,7 +49,7 @@ async function mainFn(): Promise<void> {
     poolKeys: info.poolKeys,
     payer: keypair.publicKey,
     inputAmount: new BN(AMOUNT),
-    baseIn: BASE_IN,
+    zeroForOne: ZERO_FOR_ONE,
     slippage,
     computeResult: compute,
     computeBudgetConfig: {

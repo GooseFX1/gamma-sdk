@@ -499,7 +499,7 @@ export default class CpmmModule extends ModuleBase {
       poolInfo,
       poolKeys: propPoolKeys,
       inputAmount,
-      baseIn,
+      zeroForOne,
       slippage,
       computeResult,
       computeBudgetConfig,
@@ -536,10 +536,10 @@ export default class CpmmModule extends ModuleBase {
       baseReserve: rpcPoolData!.baseReserve,
       quoteReserve: rpcPoolData!.quoteReserve,
       slippage: new Percent(0),
-      baseIn,
+      zeroForOne,
       epochInfo: await this.scope.fetchEpochInfo(),
       amount: new Decimal(inputAmount.toString()).div(
-        10 ** (baseIn ? poolInfo.mintA.decimals : poolInfo.mintB.decimals),
+        10 ** (zeroForOne? poolInfo.mintA.decimals : poolInfo.mintB.decimals),
       ),
     });
 
@@ -558,10 +558,10 @@ export default class CpmmModule extends ModuleBase {
         owner: this.scope.ownerPubKey,
 
         createInfo:
-          mintAUseSOLBalance || (baseIn ? inputAmount : anotherAmount).isZero()
+          mintAUseSOLBalance || (zeroForOne ? inputAmount : anotherAmount).isZero()
             ? {
                 payer: this.scope.ownerPubKey,
-                amount: baseIn ? inputAmount : anotherAmount,
+                amount: zeroForOne ? inputAmount : anotherAmount,
               }
             : undefined,
         skipCloseAccount: !mintAUseSOLBalance,
@@ -579,10 +579,10 @@ export default class CpmmModule extends ModuleBase {
         owner: this.scope.ownerPubKey,
 
         createInfo:
-          mintBUseSOLBalance || (baseIn ? anotherAmount : inputAmount).isZero()
+          mintBUseSOLBalance || (zeroForOne ? anotherAmount : inputAmount).isZero()
             ? {
                 payer: this.scope.ownerPubKey,
-                amount: baseIn ? anotherAmount : inputAmount,
+                amount: zeroForOne ? anotherAmount : inputAmount,
               }
             : undefined,
         skipCloseAccount: !mintBUseSOLBalance,
@@ -632,8 +632,8 @@ export default class CpmmModule extends ModuleBase {
           mintB,
 
           computeResult ? computeResult?.liquidity : _slippage.mul(liquidity).quotient,
-          baseIn ? inputAmountFee.amount : anotherAmount,
-          baseIn ? anotherAmount : inputAmountFee.amount,
+          zeroForOne ? inputAmountFee.amount : anotherAmount,
+          zeroForOne ? anotherAmount : inputAmountFee.amount,
         ),
       ],
       instructionTypes: [InstructionType.CpmmAddLiquidity],
@@ -1125,7 +1125,7 @@ export default class CpmmModule extends ModuleBase {
     amount,
     slippage,
     epochInfo,
-    baseIn,
+    zeroForOne,
   }: ComputePairAmountParams): {
     inputAmountFee: GetTransferAmountFee;
     anotherAmount: GetTransferAmountFee;
@@ -1135,13 +1135,13 @@ export default class CpmmModule extends ModuleBase {
     const coefficient = 1 - Number(slippage.toSignificant()) / 100;
     const inputAmount = new BN(
       new Decimal(amount)
-        .mul(10 ** poolInfo[baseIn ? "mintA" : "mintB"].decimals)
+        .mul(10 ** poolInfo[zeroForOne ? "mintA" : "mintB"].decimals)
         .mul(coefficient)
         .toFixed(0),
     );
     const inputAmountFee = getTransferAmountFeeV2(
       inputAmount,
-      (baseIn ? poolInfo.mintA : poolInfo.mintB).extensions?.feeConfig,
+      (zeroForOne ? poolInfo.mintA : poolInfo.mintB).extensions?.feeConfig,
       epochInfo,
       false,
     );
@@ -1152,19 +1152,19 @@ export default class CpmmModule extends ModuleBase {
 
     this.logDebug(
       "tokenIn:",
-      baseIn ? poolInfo.mintA.symbol : poolInfo.mintB.symbol,
+      zeroForOne ? poolInfo.mintA.symbol : poolInfo.mintB.symbol,
       "amountIn:",
       inputAmount.toString(),
       "amountInFee:",
       inputAmountFee.fee?.toString() ?? 0,
       "anotherToken:",
-      baseIn ? poolInfo.mintB.symbol : poolInfo.mintA.symbol,
+      zeroForOne ? poolInfo.mintB.symbol : poolInfo.mintA.symbol,
       "slippage:",
       `${slippage.toSignificant()}%`,
     );
 
     // input is fixed
-    const input = baseIn ? "base" : "quote";
+    const input = zeroForOne ? "base" : "quote";
     this.logDebug("input side:", input);
 
     const liquidity = _inputAmountWithoutFee.mul(lpAmount).div(input === "base" ? baseReserve : quoteReserve);
@@ -1180,8 +1180,8 @@ export default class CpmmModule extends ModuleBase {
         amountB: lpAmountData.amountB.toString(),
       });
       anotherAmountFee = getTransferAmountFeeV2(
-        lpAmountData[baseIn ? "amountB" : "amountA"],
-        (baseIn ? poolInfo.mintB : poolInfo.mintA).extensions?.feeConfig,
+        lpAmountData[zeroForOne ? "amountB" : "amountA"],
+        (zeroForOne ? poolInfo.mintB : poolInfo.mintA).extensions?.feeConfig,
         epochInfo,
         true,
       );
@@ -1190,7 +1190,7 @@ export default class CpmmModule extends ModuleBase {
     const _slippage = new Percent(new BN(1)).add(slippage);
     const slippageAdjustedAmount = getTransferAmountFeeV2(
       _slippage.mul(anotherAmountFee.amount.sub(anotherAmountFee.fee ?? new BN(0))).quotient,
-      (baseIn ? poolInfo.mintB : poolInfo.mintA).extensions?.feeConfig,
+      (zeroForOne ? poolInfo.mintB : poolInfo.mintA).extensions?.feeConfig,
       epochInfo,
       true,
     );
