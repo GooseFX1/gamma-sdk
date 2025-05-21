@@ -47,7 +47,6 @@ async function mainFn(): Promise<void> {
     poolInfo: info.poolInfo,
     poolKeys: info.poolKeys,
     zeroForOne: ZERO_FOR_ONE,
-    inputAmount: AMOUNT,
     swapResult,
     slippage: SLIPPAGE_BPS / 10_000,
     computeBudgetConfig: {
