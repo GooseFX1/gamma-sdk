@@ -1,3 +1,13 @@
+# [2.0.0](https://github.com/GooseFX1/gamma-sdk/compare/v1.2.1...v2.0.0) (2025-05-23)
+
+
+* featmerge main into release/npm ([c2d1edc](https://github.com/GooseFX1/gamma-sdk/commit/c2d1edc759cffebf8be3dc27ea16c605cd9815bb))
+
+
+### BREAKING CHANGES
+
+* Updated API interface and response format
+
 ## [1.2.1](https://github.com/GooseFX1/gamma-sdk/compare/v1.2.0...v1.2.1) (2025-05-14)
 
 
