@@ -31,7 +31,7 @@ export class DynamicFee {
     poolVolatilityFactor: BN,
     isInvokedWithSignedSegmenter: boolean,
   ): BN {
-    let feeRate = this.calculateDynamicFeeRate(
+    const feeRate = this.calculateDynamicFeeRate(
       blockTimestamp,
       observationState,
       feeType,
@@ -42,6 +42,40 @@ export class DynamicFee {
 
     const [dynamicFee, _feeRateDenominator] = checkedCeilDiv(amount.mul(feeRate), FEE_RATE_DENOMINATOR_VALUE);
     return dynamicFee;
+  }
+
+  static calculatePreDynamicFee(
+    amount: BN,
+    blockTimestamp: BN,
+    observationState: CpmmObservationState,
+    feeType: FeeType,
+    baseFees: BN,
+    poolVolatilityFactor: BN,
+    isInvokedWithSignedSegmenter: boolean,
+  ): BN {
+    const feeRate = this.calculateDynamicFeeRate(
+      blockTimestamp,
+      observationState,
+      feeType,
+      baseFees,
+      poolVolatilityFactor,
+      isInvokedWithSignedSegmenter,
+    );
+
+    if (feeRate.isZero()) {
+      return amount; // No fee, pre-fee amount = post-fee amount
+    }
+
+    const denominator = FEE_RATE_DENOMINATOR_VALUE.sub(feeRate);
+    if (denominator.isZero()) {
+      throw new Error("Fee rate equals denominator, causing division by zero");
+    }
+
+    // x = (y * D + (D - r) - 1) / (D - r)
+    const numerator = amount.mul(FEE_RATE_DENOMINATOR_VALUE);
+    const result = numerator.add(denominator).sub(new BN(1)).div(denominator);
+
+    return result;
   }
 
   static calculateDynamicFeeRate(

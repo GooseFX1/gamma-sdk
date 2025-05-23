@@ -10,7 +10,7 @@ const RPC_URL = process.env.RPC_URL!;
 const SEND_RPC_URL = process.env.SEND_RPC_URL ?? RPC_URL;
 const KEYPAIR_PATH = process.env.KEYPAIR_PATH!;
 const POOL_STATE = process.env.POOL_STATE!;
-const PARTNER_NAME = process.env.PARTNER_NAME ?? "test_partner"
+const PARTNER_NAME = process.env.PARTNER_NAME ?? "test_partner";
 const MICRO_LAMPORTS = parseInt(process.env.DEFAULT_CU_LAMPORTS ?? "1200000");
 
 async function mainFn(): Promise<void> {
@@ -27,8 +27,8 @@ async function mainFn(): Promise<void> {
   });
 
   const info = await client.cpmm.getPoolInfoFromRpc(POOL_STATE);
-  const partner = Keypair.generate()
-  console.log(`Initializing partner with pubkey: ${partner.publicKey.toBase58()}`)
+  const partner = Keypair.generate();
+  console.log(`Initializing partner with pubkey: ${partner.publicKey.toBase58()}`);
 
   let { transaction } = await client.cpmm.initializePartner({
     pool: POOL_STATE,
@@ -63,7 +63,7 @@ async function mainFn(): Promise<void> {
     "confirmed",
   );
   console.log(`createPartner txn confirmed. View at https://solscan.io/tx/${signature}`);
-  console.log(`Partner account: https://solscan.io/account/${partner.publicKey.toBase58()}`)
+  console.log(`Partner account: https://solscan.io/account/${partner.publicKey.toBase58()}`);
 }
 
 export function createKeypairFromFile(filePath: string): Keypair {

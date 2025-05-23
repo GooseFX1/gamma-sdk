@@ -1,12 +1,5 @@
-import { AccountMeta, PublicKey, SystemProgram } from "@solana/web3.js";
-import {
-  NATIVE_MINT,
-  TOKEN_PROGRAM_ID,
-  createCloseAccountInstruction,
-  createSyncNativeInstruction,
-  createTransferCheckedInstruction,
-  createTransferInstruction,
-} from "@solana/spl-token";
+import { PublicKey, SystemProgram } from "@solana/web3.js";
+import { NATIVE_MINT, TOKEN_PROGRAM_ID, createSyncNativeInstruction } from "@solana/spl-token";
 import { PoolInfo, PoolKeys, PoolStats } from "@/api/type";
 import { Percent } from "@/module";
 import { BN_ZERO } from "@/common/number";
@@ -50,7 +43,7 @@ import { ComputeBudgetConfig, GetTransferAmountFee, ReturnTypeFetchMultipleMintI
 import { toGammaApiToken, toFeeConfig, SOL_INFO } from "../token";
 import { getPdaPoolAuthority } from "./pda";
 import { ConstantProductCurve } from "./curve/constantProduct";
-import { Idl, Program } from "@coral-xyz/anchor";
+import { Program } from "@coral-xyz/anchor";
 import { Gamma } from "../idl/gamma.type";
 import { getReserveAccountsForWithdraw, getReservesForMarket, KaminoReserve } from "./kamino";
 
@@ -152,12 +145,20 @@ export default class CpmmModule extends ModuleBase {
   ): Promise<{
     [poolId: string]: CpmmRpcData;
   }> {
-    const accounts = await this.program.account.poolState.fetchMultiple(poolIds);
     const partnerIds = poolIds.map((id) => getPdaPoolPartners(this.program.programId, new PublicKey(id)).publicKey);
-    const partnerInfos = await this.program.account.poolPartnerInfos.fetchMultiple(partnerIds);
+    const observationIds = poolIds.map(
+      (id) => getPdaObservationId(this.program.programId, new PublicKey(id)).publicKey,
+    );
+
+    const [accounts, partnerInfos, observations] = await Promise.all([
+      this.program.account.poolState.fetchMultiple(poolIds),
+      this.program.account.poolPartnerInfos.fetchMultiple(partnerIds),
+      this.program.account.observationState.fetchMultiple(observationIds),
+    ]);
 
     const poolInfos: {
       [poolId: string]: CpmmPool & {
+        observationAccount: CpmmObservationState;
         partnerInfo: CpmmPoolPartners;
         programId: PublicKey;
       };
@@ -168,12 +169,15 @@ export default class CpmmModule extends ModuleBase {
     for (let i = 0; i < poolIds.length; i++) {
       const rpc = accounts[i];
       const partnerInfo = partnerInfos[i];
+      const observationAccount = observations[i];
       if (rpc === null) throw Error("fetch pool info error: " + String(poolIds[i]));
-      if (partnerInfo === null) throw Error("fetch poolPartners info error: " + partnerIds[i]);
+      if (partnerInfo === null) throw Error("failed to fetch poolPartners for pool: " + poolIds[i]);
+      if (observationAccount === null) throw Error("failed to fetch observation for pool: " + poolIds[i]);
 
       poolInfos[String(poolIds[i])] = {
         ...rpc,
         partnerInfo,
+        observationAccount,
         programId: this.program.programId,
       };
       needFetchConfigId.add(String(rpc.ammConfig));
@@ -457,11 +461,6 @@ export default class CpmmModule extends ModuleBase {
       mintA: mintAPubkey,
       mintB: mintBPubkey,
     });
-    const userLiquidityPda = getPdaUserLiquidity(
-      new PublicKey(programId),
-      new PublicKey(poolKeys.poolId),
-      this.scope.ownerPubKey,
-    );
 
     txBuilder.addInstruction({
       instructions: [
@@ -500,7 +499,7 @@ export default class CpmmModule extends ModuleBase {
       poolInfo,
       poolKeys: propPoolKeys,
       inputAmount,
-      baseIn,
+      baseSpecified,
       slippage,
       computeResult,
       computeBudgetConfig,
@@ -537,10 +536,10 @@ export default class CpmmModule extends ModuleBase {
       baseReserve: rpcPoolData!.baseReserve,
       quoteReserve: rpcPoolData!.quoteReserve,
       slippage: new Percent(0),
-      baseIn,
+      baseSpecified,
       epochInfo: await this.scope.fetchEpochInfo(),
       amount: new Decimal(inputAmount.toString()).div(
-        10 ** (baseIn ? poolInfo.mintA.decimals : poolInfo.mintB.decimals),
+        10 ** (baseSpecified? poolInfo.mintA.decimals : poolInfo.mintB.decimals),
       ),
     });
 
@@ -559,10 +558,10 @@ export default class CpmmModule extends ModuleBase {
         owner: this.scope.ownerPubKey,
 
         createInfo:
-          mintAUseSOLBalance || (baseIn ? inputAmount : anotherAmount).isZero()
+          mintAUseSOLBalance || (baseSpecified ? inputAmount : anotherAmount).isZero()
             ? {
                 payer: this.scope.ownerPubKey,
-                amount: baseIn ? inputAmount : anotherAmount,
+                amount: baseSpecified ? inputAmount : anotherAmount,
               }
             : undefined,
         skipCloseAccount: !mintAUseSOLBalance,
@@ -580,10 +579,10 @@ export default class CpmmModule extends ModuleBase {
         owner: this.scope.ownerPubKey,
 
         createInfo:
-          mintBUseSOLBalance || (baseIn ? anotherAmount : inputAmount).isZero()
+          mintBUseSOLBalance || (baseSpecified ? anotherAmount : inputAmount).isZero()
             ? {
                 payer: this.scope.ownerPubKey,
-                amount: baseIn ? anotherAmount : inputAmount,
+                amount: baseSpecified ? anotherAmount : inputAmount,
               }
             : undefined,
         skipCloseAccount: !mintBUseSOLBalance,
@@ -633,8 +632,8 @@ export default class CpmmModule extends ModuleBase {
           mintB,
 
           computeResult ? computeResult?.liquidity : _slippage.mul(liquidity).quotient,
-          baseIn ? inputAmountFee.amount : anotherAmount,
-          baseIn ? anotherAmount : inputAmountFee.amount,
+          baseSpecified ? inputAmountFee.amount : anotherAmount,
+          baseSpecified ? anotherAmount : inputAmountFee.amount,
         ),
       ],
       instructionTypes: [InstructionType.CpmmAddLiquidity],
@@ -651,7 +650,7 @@ export default class CpmmModule extends ModuleBase {
     let tokenAReserve: KaminoReserve | undefined = this.reserves.get(poolInfo.mintA.address);
     let tokenBReserve: KaminoReserve | undefined = this.reserves.get(poolInfo.mintB.address);
     if (!tokenAReserve || !tokenBReserve) {
-      this.reserves = await getReservesForMarket(this.program.provider);
+      this.reserves = await getReservesForMarket(this.program.provider.connection);
       tokenAReserve = this.reserves.get(poolInfo.mintA.address);
       tokenBReserve = this.reserves.get(poolInfo.mintB.address);
     }
@@ -770,7 +769,6 @@ export default class CpmmModule extends ModuleBase {
       poolKeys: propPoolKeys,
       zeroForOne,
       baseIn,
-      inputAmount,
       swapResult,
       slippage = 0,
       config,
@@ -885,7 +883,7 @@ export default class CpmmModule extends ModuleBase {
               zeroForOne ? mintB : mintA,
               getPdaObservationId(new PublicKey(poolInfo.programId), new PublicKey(poolInfo.id)).publicKey,
 
-              inputAmount,
+              swapResult.sourceAmountSwapped,
               swapResult.destinationAmountSwapped,
               params.dflowSegmenterOptions,
               params.referralAccounts,
@@ -927,7 +925,6 @@ export default class CpmmModule extends ModuleBase {
       poolInfo,
       poolKeys: propPoolKeys,
       zeroForOne,
-      inputAmount,
       swapResult,
       slippage = 0,
       config,
@@ -1035,7 +1032,7 @@ export default class CpmmModule extends ModuleBase {
           zeroForOne ? mintB : mintA,
           getPdaObservationId(new PublicKey(poolInfo.programId), new PublicKey(poolInfo.id)).publicKey,
 
-          inputAmount,
+          swapResult.sourceAmountSwapped,
           swapResult.destinationAmountSwapped,
           params.dflowSegmenterOptions,
           params.referralAccounts,
@@ -1051,14 +1048,16 @@ export default class CpmmModule extends ModuleBase {
 
   public computeSwapAmount({
     pool,
-    amountIn,
-    outputMint,
+    amount,
+    baseIn,
+    zeroForOne,
     slippage,
     observationState,
   }: {
     pool: CpmmComputeData;
-    amountIn: BN;
-    outputMint: string | PublicKey;
+    amount: BN;
+    baseIn: boolean;
+    zeroForOne: boolean;
     slippage: number;
     observationState: CpmmObservationState;
   }): {
@@ -1066,36 +1065,53 @@ export default class CpmmModule extends ModuleBase {
     amountIn: BN;
     amountOut: BN;
     minAmountOut: BN;
+    maxAmountIn: BN;
     fee: BN;
     executionPrice: Decimal;
-    priceImpact: any;
+    priceImpact: Decimal;
   } {
-    const baseIn = outputMint.toString() === pool.mintB.address;
+    const [inputToken, outputToken, inputTokenReserves, outputTokenReserves] = zeroForOne
+      ? [pool.mintA, pool.mintB, pool.baseReserve, pool.quoteReserve]
+      : [pool.mintB, pool.mintA, pool.quoteReserve, pool.baseReserve];
 
-    const swapResult = CurveCalculator.swap(
-      amountIn,
-      baseIn ? pool.baseReserve : pool.quoteReserve,
-      baseIn ? pool.quoteReserve : pool.baseReserve,
-      pool.configInfo.tradeFeeRate,
-      observationState,
-      pool.volatilityFactor,
+    const inputDecimals = inputToken.decimals;
+    const outputDecimals = outputToken.decimals;
+
+    const swapResult = baseIn
+      ? CurveCalculator.swapBaseIn(
+          amount,
+          new BN(inputTokenReserves),
+          new BN(outputTokenReserves),
+          new BN(pool.configInfo.tradeFeeRate),
+          observationState,
+          pool.volatilityFactor,
+        )
+      : CurveCalculator.swapBaseOut(
+          amount,
+          new BN(inputTokenReserves),
+          new BN(outputTokenReserves),
+          new BN(pool.configInfo.tradeFeeRate),
+          observationState,
+          pool.volatilityFactor,
+        );
+
+    const currentPrice = zeroForOne ? pool.poolPrice : new Decimal(1).div(pool.poolPrice);
+    const numerator = new Decimal(swapResult.destinationAmountSwapped.toString()).div(
+      new Decimal(10).pow(inputDecimals),
     );
-
-    const currentPrice = baseIn ? pool.poolPrice : new Decimal(1).div(pool.poolPrice);
-    const [numDecimals, denomDecimals] = baseIn
-      ? [pool.mintB.decimals, pool.mintA.decimals]
-      : [pool.mintA.decimals, pool.mintB.decimals];
-    const numerator = new Decimal(swapResult.destinationAmountSwapped.toString()).div(new Decimal(10).pow(numDecimals));
-    const denominator = new Decimal(swapResult.sourceAmountSwapped.toString()).div(new Decimal(10).pow(denomDecimals));
+    const denominator = new Decimal(swapResult.sourceAmountSwapped.toString()).div(new Decimal(10).pow(outputDecimals));
     const executionPrice = numerator.div(denominator);
 
-    const minAmountOut = swapResult.destinationAmountSwapped.mul(new BN((1 - slippage) * 10000)).div(new BN(10000));
+    const otherAmountThreshold = baseIn
+      ? swapResult.destinationAmountSwapped.mul(new BN((1 - slippage) * 10000)).div(new BN(10000))
+      : swapResult.sourceAmountSwapped.mul(new BN((1 + slippage) * 10000)).div(new BN(10000));
 
     return {
-      allTrade: swapResult.sourceAmountSwapped.eq(amountIn),
-      amountIn,
+      allTrade: baseIn ? swapResult.sourceAmountSwapped.eq(amount) : swapResult.destinationAmountSwapped.eq(amount),
+      amountIn: swapResult.sourceAmountSwapped,
       amountOut: swapResult.destinationAmountSwapped,
-      minAmountOut,
+      maxAmountIn: baseIn ? swapResult.sourceAmountSwapped : otherAmountThreshold,
+      minAmountOut: baseIn ? otherAmountThreshold : swapResult.destinationAmountSwapped,
       executionPrice,
       fee: swapResult.tradeFee,
       priceImpact: currentPrice.sub(executionPrice).div(currentPrice),
@@ -1109,7 +1125,7 @@ export default class CpmmModule extends ModuleBase {
     amount,
     slippage,
     epochInfo,
-    baseIn,
+    baseSpecified
   }: ComputePairAmountParams): {
     inputAmountFee: GetTransferAmountFee;
     anotherAmount: GetTransferAmountFee;
@@ -1119,13 +1135,13 @@ export default class CpmmModule extends ModuleBase {
     const coefficient = 1 - Number(slippage.toSignificant()) / 100;
     const inputAmount = new BN(
       new Decimal(amount)
-        .mul(10 ** poolInfo[baseIn ? "mintA" : "mintB"].decimals)
+        .mul(10 ** poolInfo[baseSpecified ? "mintA" : "mintB"].decimals)
         .mul(coefficient)
         .toFixed(0),
     );
     const inputAmountFee = getTransferAmountFeeV2(
       inputAmount,
-      (baseIn ? poolInfo.mintA : poolInfo.mintB).extensions?.feeConfig,
+      (baseSpecified ? poolInfo.mintA : poolInfo.mintB).extensions?.feeConfig,
       epochInfo,
       false,
     );
@@ -1136,19 +1152,19 @@ export default class CpmmModule extends ModuleBase {
 
     this.logDebug(
       "tokenIn:",
-      baseIn ? poolInfo.mintA.symbol : poolInfo.mintB.symbol,
+      baseSpecified ? poolInfo.mintA.symbol : poolInfo.mintB.symbol,
       "amountIn:",
       inputAmount.toString(),
       "amountInFee:",
       inputAmountFee.fee?.toString() ?? 0,
       "anotherToken:",
-      baseIn ? poolInfo.mintB.symbol : poolInfo.mintA.symbol,
+      baseSpecified ? poolInfo.mintB.symbol : poolInfo.mintA.symbol,
       "slippage:",
       `${slippage.toSignificant()}%`,
     );
 
     // input is fixed
-    const input = baseIn ? "base" : "quote";
+    const input = baseSpecified ? "base" : "quote";
     this.logDebug("input side:", input);
 
     const liquidity = _inputAmountWithoutFee.mul(lpAmount).div(input === "base" ? baseReserve : quoteReserve);
@@ -1164,8 +1180,8 @@ export default class CpmmModule extends ModuleBase {
         amountB: lpAmountData.amountB.toString(),
       });
       anotherAmountFee = getTransferAmountFeeV2(
-        lpAmountData[baseIn ? "amountB" : "amountA"],
-        (baseIn ? poolInfo.mintB : poolInfo.mintA).extensions?.feeConfig,
+        lpAmountData[baseSpecified ? "amountB" : "amountA"],
+        (baseSpecified ? poolInfo.mintB : poolInfo.mintA).extensions?.feeConfig,
         epochInfo,
         true,
       );
@@ -1174,7 +1190,7 @@ export default class CpmmModule extends ModuleBase {
     const _slippage = new Percent(new BN(1)).add(slippage);
     const slippageAdjustedAmount = getTransferAmountFeeV2(
       _slippage.mul(anotherAmountFee.amount.sub(anotherAmountFee.fee ?? new BN(0))).quotient,
-      (baseIn ? poolInfo.mintB : poolInfo.mintA).extensions?.feeConfig,
+      (baseSpecified ? poolInfo.mintB : poolInfo.mintA).extensions?.feeConfig,
       epochInfo,
       true,
     );

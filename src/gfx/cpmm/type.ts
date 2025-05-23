@@ -58,7 +58,7 @@ export interface AddCpmmLiquidityParams<T = TxVersion.LEGACY> {
   poolKeys?: PoolKeys;
   payer?: PublicKey;
   inputAmount: BN;
-  baseIn: boolean;
+  baseSpecified: boolean;
   slippage: Percent;
   config?: {
     bypassAssociatedCheck?: boolean;
@@ -92,7 +92,6 @@ export interface CpmmSwapWithOracleParams<T = TxVersion.LEGACY> {
   zeroForOne: boolean;
   slippage?: number;
   swapResult: Pick<SwapResult, "sourceAmountSwapped" | "destinationAmountSwapped">;
-  inputAmount: BN;
 
   config?: {
     bypassAssociatedCheck?: boolean;
@@ -123,7 +122,7 @@ export interface ComputePairAmountParams {
   amount: string | Decimal;
   slippage: Percent;
   epochInfo: EpochInfo;
-  baseIn?: boolean;
+  baseSpecified?: boolean
 }
 
 export type CpmmObservationState = IdlAccounts<Gamma>["observationState"];
@@ -147,7 +146,8 @@ export type CpmmRpcData = CpmmPool & {
   vaultAAmount: BN;
   vaultBAmount: BN;
   configInfo?: CpmmConfig;
-  partnerInfo?: CpmmPoolPartners;
+  partnerInfo: CpmmPoolPartners;
+  observationAccount: CpmmObservationState;
   poolPrice: Decimal;
   programId: PublicKey;
 };
