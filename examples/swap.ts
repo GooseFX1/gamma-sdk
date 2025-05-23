@@ -32,7 +32,7 @@ async function mainFn(): Promise<void> {
   const info = await client.cpmm.getPoolInfoFromRpc(POOL_STATE.toBase58());
   const observationState = await client.cpmm.getObservationStates([info.rpcData.observationKey]).then((res) => res[0]);
 
-  const swapResult = CurveCalculator.swap(
+  const swapResult = CurveCalculator.swapBaseIn(
     AMOUNT,
     ZERO_FOR_ONE ? info.rpcData.baseReserve : info.rpcData.quoteReserve,
     ZERO_FOR_ONE ? info.rpcData.quoteReserve : info.rpcData.baseReserve,
@@ -40,14 +40,13 @@ async function mainFn(): Promise<void> {
     observationState!,
     info.rpcData.volatilityFactor,
   );
-  console.log(`swapResult: `, swapResult)
+  console.log(`swapResult: `, swapResult);
 
   const { transaction } = await client.cpmm.swap({
     poolInfo: info.poolInfo,
     poolKeys: info.poolKeys,
     zeroForOne: ZERO_FOR_ONE,
     baseIn: BASE_IN,
-    inputAmount: AMOUNT,
     swapResult,
     slippage: SLIPPAGE_BPS / 10_000,
     computeBudgetConfig: {

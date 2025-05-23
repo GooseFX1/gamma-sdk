@@ -110,7 +110,7 @@ export async function makeWithdrawCpmmInInstruction(
   lpAmount: BN,
   amountMintA: BN,
   amountMintB: BN,
-  kaminoAccounts?: AccountMeta[]
+  kaminoAccounts?: AccountMeta[],
 ): Promise<TransactionInstruction> {
   return await program.methods
     .withdraw(lpAmount, amountMintA, amountMintB)
