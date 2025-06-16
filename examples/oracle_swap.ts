@@ -5,8 +5,8 @@ import fs from "fs";
 import BN from "bn.js";
 
 import { Connection, Keypair, PublicKey, VersionedTransaction } from "@solana/web3.js";
-import { TxVersion } from "@/common";
 import { OracleBasedCurveCalculator } from "@/gfx/cpmm/curve/oracleCalculator";
+import { TxVersion } from "@/common";
 
 const RPC_URL = process.env.RPC_URL!;
 const SEND_RPC_URL = process.env.SEND_RPC_URL ?? RPC_URL;
@@ -30,15 +30,14 @@ async function mainFn(): Promise<void> {
   });
 
   const info = await client.cpmm.getPoolInfoFromRpc(POOL_STATE.toBase58());
-  const observationState = await client.cpmm.getObservationStates([info.rpcData.observationKey]).then((res) => res[0]);
+
+  if (!info.rpcData.configInfo) throw new Error("configInfo not found");
 
   const swapResult = OracleBasedCurveCalculator.swap(
     AMOUNT,
     ZERO_FOR_ONE,
-    info.rpcData.baseReserve,
-    info.rpcData.quoteReserve,
-    info.rpcData.configInfo!.tradeFeeRate,
-    observationState!,
+    info.rpcData.configInfo,
+    info.rpcData.observationAccount,
     info.rpcData,
   );
   console.log(`swapResult: `, swapResult);

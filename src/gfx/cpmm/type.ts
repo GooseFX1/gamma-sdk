@@ -1,4 +1,4 @@
-import { EpochInfo, PublicKey } from "@solana/web3.js";
+import { AccountInfo, EpochInfo, PublicKey } from "@solana/web3.js";
 import { ConfigInfo, PoolInfo, PoolKeys } from "@/api/type";
 import { TxVersion } from "@/common/txTool/txType";
 import BN from "bn.js";
@@ -125,9 +125,15 @@ export interface ComputePairAmountParams {
   baseSpecified?: boolean
 }
 
-export type CpmmObservationState = IdlAccounts<Gamma>["observationState"];
-export type CpmmConfig = IdlAccounts<Gamma>["ammConfig"];
-export type CpmmPool = IdlAccounts<Gamma>["poolState"];
+export type CpmmObservationState = IdlAccounts<Gamma>["observationState"] & {
+  raw: AccountInfo<Buffer>;
+};
+export type CpmmConfig = IdlAccounts<Gamma>["ammConfig"] & {
+  raw: AccountInfo<Buffer>;
+};
+export type CpmmPool = IdlAccounts<Gamma>["poolState"] & {
+  raw: AccountInfo<Buffer>;
+};
 export type CpmmPoolPartners = IdlAccounts<Gamma>["poolPartnerInfos"];
 export type CpmmRewardInfo = IdlAccounts<Gamma>["rewardInfo"];
 export type CpmmUserLiquidityAccount = IdlAccounts<Gamma>["userPoolLiquidity"];
