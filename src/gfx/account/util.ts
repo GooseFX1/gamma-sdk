@@ -1,4 +1,4 @@
-import { AccountInfo, PublicKey, RpcResponseAndContext, Keypair, GetProgramAccountsResponse } from "@solana/web3.js";
+import { AccountInfo, PublicKey, RpcResponseAndContext, Keypair, GetProgramAccountsResponse, Commitment } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import BN from "bn.js";
 import { createLogger, getATAAddress } from "@/common";
@@ -6,6 +6,9 @@ import { createLogger, getATAAddress } from "@/common";
 import { splAccountLayout } from "./layout";
 import { TokenAccount, TokenAccountRaw } from "./types";
 import { sha256 } from "@noble/hashes/sha256";
+import { getMultipleAccounts } from "@coral-xyz/anchor/dist/cjs/utils/rpc";
+import { IdlAccounts, Program } from "@coral-xyz/anchor";
+import { Gamma } from "../idl/gamma.type";
 
 const logger = createLogger("Gfx_Util");
 
@@ -70,4 +73,65 @@ function createWithSeed(fromPublicKey: PublicKey, seed: string, programId: Publi
   );
   const publicKeyBytes = sha256(new Uint8Array(buffer));
   return new PublicKey(publicKeyBytes);
+}
+
+async function fetchMultiple<T>(
+  accountName: string,
+  program: Program<Gamma>,
+  addresses: string[]
+): Promise<Array<{
+  raw: AccountInfo<Buffer>;
+  data: T;
+} | null>> {
+  const accounts = await getMultipleAccounts(program.provider.connection, addresses.map((address) => new PublicKey(address)));
+  // Decode accounts where discriminator is correct, null otherwise
+  return accounts.map((result) => {
+    if (result == null) {
+      return null;
+    }
+    const { account } = result;
+    return {
+      raw: account,
+      data: program.coder.accounts.decode(accountName, account.data) as T,
+    };
+  });
+}
+
+export class PoolState {
+  static async fetchMultiple(
+    program: Program<Gamma>,
+    addresses: string[]
+  ): Promise<Array<{
+    raw: AccountInfo<Buffer>;
+    data: NonNullable<Awaited<ReturnType<Program<Gamma>['account']['poolState']['fetch']>>>;
+  } | null>> {
+    return fetchMultiple<NonNullable<Awaited<ReturnType<Program<Gamma>['account']['poolState']['fetch']>>>>('poolState', program, addresses);
+  }
+}
+
+export class ObservationState {
+  static async fetchMultiple(
+    program: Program<Gamma>,
+    addresses: (string | PublicKey)[]
+  ): Promise<Array<{
+    raw: AccountInfo<Buffer>;
+    data: NonNullable<Awaited<ReturnType<Program<Gamma>['account']['observationState']['fetch']>>>;
+  } | null>> {
+    const stringAddresses = addresses.map(address =>
+      typeof address === 'string' ? address : address.toBase58()
+    );
+    return fetchMultiple<NonNullable<Awaited<ReturnType<Program<Gamma>['account']['observationState']['fetch']>>>>('observationState', program, stringAddresses);
+  }
+}
+
+export class AmmConfig {
+  static async fetchMultiple(
+    program: Program<Gamma>,
+    addresses: string[]
+  ): Promise<Array<{
+    raw: AccountInfo<Buffer>;
+    data: NonNullable<Awaited<ReturnType<Program<Gamma>['account']['ammConfig']['fetch']>>>;
+  } | null>> {
+    return fetchMultiple<NonNullable<Awaited<ReturnType<Program<Gamma>['account']['ammConfig']['fetch']>>>>('ammConfig', program, addresses);
+  }
 }

@@ -46,6 +46,7 @@ import { ConstantProductCurve } from "./curve/constantProduct";
 import { Program } from "@coral-xyz/anchor";
 import { Gamma } from "../idl/gamma.type";
 import { getReserveAccountsForWithdraw, getReservesForMarket, KaminoReserve } from "./kamino";
+import { AmmConfig, ObservationState, PoolState } from "../account";
 
 export default class CpmmModule extends ModuleBase {
   private program: Program<Gamma>;
@@ -86,7 +87,7 @@ export default class CpmmModule extends ModuleBase {
     };
   }> {
     const partnerIds = poolIds.map((id) => getPdaPoolPartners(this.program.programId, new PublicKey(id)).publicKey);
-    const poolInfos = await this.program.account.poolState.fetchMultiple(poolIds);
+    const poolInfos = await PoolState.fetchMultiple(this.program, poolIds);
     const partnerInfos = await this.program.account.poolPartnerInfos.fetchMultiple(partnerIds);
 
     const returnData: {
@@ -102,7 +103,10 @@ export default class CpmmModule extends ModuleBase {
       const partners = partnerInfos[i];
       if (pool === null) throw Error("fetch pool info error: " + poolIds[i]);
       if (partners === null) throw Error("fetch poolPartners info error: " + partnerIds[i]);
-      const { token0, token1, lp } = await this.getTokenInvestedByPartner(pool, partners, partner);
+      const { token0, token1, lp } = await this.getTokenInvestedByPartner({
+        ...pool.data,
+        raw: pool.raw,
+      }, partners, partner);
 
       returnData[poolIds[i]] = {
         totalInvestedThoughPartnerToken0: token0,
@@ -151,9 +155,9 @@ export default class CpmmModule extends ModuleBase {
     );
 
     const [accounts, partnerInfos, observations] = await Promise.all([
-      this.program.account.poolState.fetchMultiple(poolIds),
+      PoolState.fetchMultiple(this.program, poolIds),
       this.program.account.poolPartnerInfos.fetchMultiple(partnerIds),
-      this.program.account.observationState.fetchMultiple(observationIds),
+      ObservationState.fetchMultiple(this.program, observationIds),
     ]);
 
     const poolInfos: {
@@ -167,17 +171,25 @@ export default class CpmmModule extends ModuleBase {
     const needFetchConfigId = new Set<string>();
 
     for (let i = 0; i < poolIds.length; i++) {
-      const rpc = accounts[i];
+      const account = accounts[i];
+      if (!account) throw Error("fetch pool info error: " + String(poolIds[i]));
+      const rpc = account.data;
+      const raw = account.raw;
       const partnerInfo = partnerInfos[i];
       const observationAccount = observations[i];
+      if (!raw) throw Error("fetch pool info error: " + String(poolIds[i]));
       if (rpc === null) throw Error("fetch pool info error: " + String(poolIds[i]));
       if (partnerInfo === null) throw Error("failed to fetch poolPartners for pool: " + poolIds[i]);
       if (observationAccount === null) throw Error("failed to fetch observation for pool: " + poolIds[i]);
 
       poolInfos[String(poolIds[i])] = {
         ...rpc,
+        raw,
         partnerInfo,
-        observationAccount,
+        observationAccount: {
+          ...observationAccount.data,
+          raw: observationAccount.raw,
+        },
         programId: this.program.programId,
       };
       needFetchConfigId.add(String(rpc.ammConfig));
@@ -187,12 +199,15 @@ export default class CpmmModule extends ModuleBase {
 
     if (fetchConfigInfo) {
       const configIds = [...needFetchConfigId];
-      const configs = await this.program.account.ammConfig.fetchMultiple(configIds);
+      const configs = await AmmConfig.fetchMultiple(this.program, configIds);
 
       for (let i = 0; i < configIds.length; i++) {
         const configItemInfo = configs[i];
         if (configItemInfo === null) throw Error("fetch pool config error: " + configIds[i]);
-        configInfo[configIds[i]] = configItemInfo;
+        configInfo[configIds[i]] = {
+          ...configItemInfo.data,
+          raw: configItemInfo.raw,
+        };
       }
     }
 
@@ -275,15 +290,15 @@ export default class CpmmModule extends ModuleBase {
     const partners =
       partnerKeys.length > 0
         ? await this.program.account.partner.fetchMultiple(partnerKeys).then((res) =>
-            res
-              .filter((r) => r !== null)
-              .map((r, index) => {
-                return {
-                  acc: r,
-                  address: partnerKeys[index],
-                };
-              }),
-          )
+          res
+            .filter((r) => r !== null)
+            .map((r, index) => {
+              return {
+                acc: r,
+                address: partnerKeys[index],
+              };
+            }),
+        )
         : [];
 
     const mintInfos = await fetchMultipleMintInfos({
@@ -338,6 +353,7 @@ export default class CpmmModule extends ModuleBase {
 
     return {
       poolInfo: {
+        accountInfo: rpcData.raw,
         programId: rpcData.programId.toBase58(),
         id: poolId,
         config: configInfo,
@@ -423,9 +439,9 @@ export default class CpmmModule extends ModuleBase {
         owner: this.scope.ownerPubKey,
         createInfo: mintAUseSOLBalance
           ? {
-              payer: payer!,
-              amount: mintAAmount,
-            }
+            payer: payer!,
+            amount: mintAAmount,
+          }
           : undefined,
         notUseTokenAccount: mintAUseSOLBalance,
         skipCloseAccount: !mintAUseSOLBalance,
@@ -440,9 +456,9 @@ export default class CpmmModule extends ModuleBase {
         owner: this.scope.ownerPubKey,
         createInfo: mintBUseSOLBalance
           ? {
-              payer: payer!,
-              amount: mintBAmount,
-            }
+            payer: payer!,
+            amount: mintBAmount,
+          }
           : undefined,
 
         notUseTokenAccount: mintBUseSOLBalance,
@@ -529,19 +545,19 @@ export default class CpmmModule extends ModuleBase {
       inputAmountFee,
       anotherAmount: _anotherAmount,
     } = computeResult ||
-    this.computePairAmount({
-      poolInfo: {
-        ...poolInfo,
-      },
-      baseReserve: rpcPoolData!.baseReserve,
-      quoteReserve: rpcPoolData!.quoteReserve,
-      slippage: new Percent(0),
-      baseSpecified,
-      epochInfo: await this.scope.fetchEpochInfo(),
-      amount: new Decimal(inputAmount.toString()).div(
-        10 ** (baseSpecified? poolInfo.mintA.decimals : poolInfo.mintB.decimals),
-      ),
-    });
+      this.computePairAmount({
+        poolInfo: {
+          ...poolInfo,
+        },
+        baseReserve: rpcPoolData!.baseReserve,
+        quoteReserve: rpcPoolData!.quoteReserve,
+        slippage: new Percent(0),
+        baseSpecified,
+        epochInfo: await this.scope.fetchEpochInfo(),
+        amount: new Decimal(inputAmount.toString()).div(
+          10 ** (baseSpecified ? poolInfo.mintA.decimals : poolInfo.mintB.decimals),
+        ),
+      });
 
     const anotherAmount = _anotherAmount.amount;
     const mintAUseSOLBalance = poolInfo.mintA.address === NATIVE_MINT.toString();
@@ -560,9 +576,9 @@ export default class CpmmModule extends ModuleBase {
         createInfo:
           mintAUseSOLBalance || (baseSpecified ? inputAmount : anotherAmount).isZero()
             ? {
-                payer: this.scope.ownerPubKey,
-                amount: baseSpecified ? inputAmount : anotherAmount,
-              }
+              payer: this.scope.ownerPubKey,
+              amount: baseSpecified ? inputAmount : anotherAmount,
+            }
             : undefined,
         skipCloseAccount: !mintAUseSOLBalance,
         notUseTokenAccount: mintAUseSOLBalance,
@@ -581,9 +597,9 @@ export default class CpmmModule extends ModuleBase {
         createInfo:
           mintBUseSOLBalance || (baseSpecified ? anotherAmount : inputAmount).isZero()
             ? {
-                payer: this.scope.ownerPubKey,
-                amount: baseSpecified ? anotherAmount : inputAmount,
-              }
+              payer: this.scope.ownerPubKey,
+              amount: baseSpecified ? anotherAmount : inputAmount,
+            }
             : undefined,
         skipCloseAccount: !mintBUseSOLBalance,
         notUseTokenAccount: mintBUseSOLBalance,
@@ -810,9 +826,9 @@ export default class CpmmModule extends ModuleBase {
         createInfo:
           mintAUseSOLBalance || !zeroForOne
             ? {
-                payer: this.scope.ownerPubKey,
-                amount: zeroForOne ? swapResult.sourceAmountSwapped : 0,
-              }
+              payer: this.scope.ownerPubKey,
+              amount: zeroForOne ? swapResult.sourceAmountSwapped : 0,
+            }
             : undefined,
         notUseTokenAccount: mintAUseSOLBalance,
         skipCloseAccount: !mintAUseSOLBalance,
@@ -829,9 +845,9 @@ export default class CpmmModule extends ModuleBase {
         createInfo:
           mintBUseSOLBalance || zeroForOne
             ? {
-                payer: this.scope.ownerPubKey,
-                amount: zeroForOne ? 0 : swapResult.sourceAmountSwapped,
-              }
+              payer: this.scope.ownerPubKey,
+              amount: zeroForOne ? 0 : swapResult.sourceAmountSwapped,
+            }
             : undefined,
         notUseTokenAccount: mintBUseSOLBalance,
         skipCloseAccount: !mintBUseSOLBalance,
@@ -869,48 +885,48 @@ export default class CpmmModule extends ModuleBase {
       instructions: [
         baseIn
           ? await makeSwapCpmmBaseInInstruction(
-              this.program,
-              this.scope.ownerPubKey,
-              new PublicKey(poolKeys.config.id),
-              new PublicKey(poolInfo.id),
-              zeroForOne ? mintATokenAcc! : mintBTokenAcc!,
-              zeroForOne ? mintBTokenAcc! : mintATokenAcc!,
-              new PublicKey(zeroForOne ? poolKeys.mintAVault : poolKeys.mintBVault),
-              new PublicKey(zeroForOne ? poolKeys.mintBVault : poolKeys.mintAVault),
-              new PublicKey(zeroForOne ? poolKeys.mintAProgram : poolKeys.mintBProgram),
-              new PublicKey(zeroForOne ? poolKeys.mintBProgram : poolKeys.mintAProgram),
-              zeroForOne ? mintA : mintB,
-              zeroForOne ? mintB : mintA,
-              getPdaObservationId(new PublicKey(poolInfo.programId), new PublicKey(poolInfo.id)).publicKey,
+            this.program,
+            this.scope.ownerPubKey,
+            new PublicKey(poolKeys.config.id),
+            new PublicKey(poolInfo.id),
+            zeroForOne ? mintATokenAcc! : mintBTokenAcc!,
+            zeroForOne ? mintBTokenAcc! : mintATokenAcc!,
+            new PublicKey(zeroForOne ? poolKeys.mintAVault : poolKeys.mintBVault),
+            new PublicKey(zeroForOne ? poolKeys.mintBVault : poolKeys.mintAVault),
+            new PublicKey(zeroForOne ? poolKeys.mintAProgram : poolKeys.mintBProgram),
+            new PublicKey(zeroForOne ? poolKeys.mintBProgram : poolKeys.mintAProgram),
+            zeroForOne ? mintA : mintB,
+            zeroForOne ? mintB : mintA,
+            getPdaObservationId(new PublicKey(poolInfo.programId), new PublicKey(poolInfo.id)).publicKey,
 
-              swapResult.sourceAmountSwapped,
-              swapResult.destinationAmountSwapped,
-              params.dflowSegmenterOptions,
-              params.referralAccounts,
-            )
+            swapResult.sourceAmountSwapped,
+            swapResult.destinationAmountSwapped,
+            params.dflowSegmenterOptions,
+            params.referralAccounts,
+          )
           : await makeSwapCpmmBaseOutInstruction(
-              this.program,
-              this.scope.ownerPubKey,
-              new PublicKey(poolKeys.config.id),
-              new PublicKey(poolInfo.id),
+            this.program,
+            this.scope.ownerPubKey,
+            new PublicKey(poolKeys.config.id),
+            new PublicKey(poolInfo.id),
 
-              zeroForOne ? mintATokenAcc! : mintBTokenAcc!,
-              zeroForOne ? mintBTokenAcc! : mintATokenAcc!,
+            zeroForOne ? mintATokenAcc! : mintBTokenAcc!,
+            zeroForOne ? mintBTokenAcc! : mintATokenAcc!,
 
-              new PublicKey(zeroForOne ? poolKeys.mintAVault : poolKeys.mintBVault),
-              new PublicKey(zeroForOne ? poolKeys.mintBVault : poolKeys.mintAVault),
-              new PublicKey(zeroForOne ? poolKeys.mintAProgram : poolKeys.mintBProgram),
-              new PublicKey(zeroForOne ? poolKeys.mintBProgram : poolKeys.mintAProgram),
-              zeroForOne ? mintA : mintB,
-              zeroForOne ? mintB : mintA,
+            new PublicKey(zeroForOne ? poolKeys.mintAVault : poolKeys.mintBVault),
+            new PublicKey(zeroForOne ? poolKeys.mintBVault : poolKeys.mintAVault),
+            new PublicKey(zeroForOne ? poolKeys.mintAProgram : poolKeys.mintBProgram),
+            new PublicKey(zeroForOne ? poolKeys.mintBProgram : poolKeys.mintAProgram),
+            zeroForOne ? mintA : mintB,
+            zeroForOne ? mintB : mintA,
 
-              getPdaObservationId(new PublicKey(poolInfo.programId), new PublicKey(poolInfo.id)).publicKey,
+            getPdaObservationId(new PublicKey(poolInfo.programId), new PublicKey(poolInfo.id)).publicKey,
 
-              swapResult.sourceAmountSwapped,
-              swapResult.destinationAmountSwapped,
-              params.dflowSegmenterOptions,
-              params.referralAccounts,
-            ),
+            swapResult.sourceAmountSwapped,
+            swapResult.destinationAmountSwapped,
+            params.dflowSegmenterOptions,
+            params.referralAccounts,
+          ),
       ],
       instructionTypes: [baseIn ? InstructionType.CpmmSwapBaseIn : InstructionType.CpmmSwapBaseOut],
     });
@@ -960,9 +976,9 @@ export default class CpmmModule extends ModuleBase {
         createInfo:
           mintAUseSOLBalance || !zeroForOne
             ? {
-                payer: this.scope.ownerPubKey,
-                amount: zeroForOne ? swapResult.sourceAmountSwapped : 0,
-              }
+              payer: this.scope.ownerPubKey,
+              amount: zeroForOne ? swapResult.sourceAmountSwapped : 0,
+            }
             : undefined,
         notUseTokenAccount: mintAUseSOLBalance,
         skipCloseAccount: !mintAUseSOLBalance,
@@ -979,9 +995,9 @@ export default class CpmmModule extends ModuleBase {
         createInfo:
           mintBUseSOLBalance || zeroForOne
             ? {
-                payer: this.scope.ownerPubKey,
-                amount: zeroForOne ? 0 : swapResult.sourceAmountSwapped,
-              }
+              payer: this.scope.ownerPubKey,
+              amount: zeroForOne ? 0 : swapResult.sourceAmountSwapped,
+            }
             : undefined,
         notUseTokenAccount: mintBUseSOLBalance,
         skipCloseAccount: !mintBUseSOLBalance,
@@ -1079,21 +1095,21 @@ export default class CpmmModule extends ModuleBase {
 
     const swapResult = baseIn
       ? CurveCalculator.swapBaseIn(
-          amount,
-          new BN(inputTokenReserves),
-          new BN(outputTokenReserves),
-          new BN(pool.configInfo.tradeFeeRate),
-          observationState,
-          pool.volatilityFactor,
-        )
+        amount,
+        new BN(inputTokenReserves),
+        new BN(outputTokenReserves),
+        new BN(pool.configInfo.tradeFeeRate),
+        observationState,
+        pool.volatilityFactor,
+      )
       : CurveCalculator.swapBaseOut(
-          amount,
-          new BN(inputTokenReserves),
-          new BN(outputTokenReserves),
-          new BN(pool.configInfo.tradeFeeRate),
-          observationState,
-          pool.volatilityFactor,
-        );
+        amount,
+        new BN(inputTokenReserves),
+        new BN(outputTokenReserves),
+        new BN(pool.configInfo.tradeFeeRate),
+        observationState,
+        pool.volatilityFactor,
+      );
 
     const currentPrice = zeroForOne ? pool.poolPrice : new Decimal(1).div(pool.poolPrice);
     const numerator = new Decimal(swapResult.destinationAmountSwapped.toString()).div(
@@ -1298,7 +1314,13 @@ export default class CpmmModule extends ModuleBase {
   }
 
   public async getObservationStates(addresses: PublicKey[]): Promise<(CpmmObservationState | null)[]> {
-    return await this.program.account.observationState.fetchMultiple(addresses);
+    return (await ObservationState.fetchMultiple(this.program, addresses)).map((account) => {
+      if (!account) return null;
+      return {
+        ...account.data,
+        raw: account.raw,
+      };
+    });
   }
 }
 
