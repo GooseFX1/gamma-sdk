@@ -1,3 +1,5 @@
+import { AccountInfo } from "@solana/web3.js";
+
 export type ConfigInfo = {
   id: string;
   index: number;
@@ -78,6 +80,7 @@ type BasePoolInfo<T extends GammaToken> = {
     monthly: PoolStats;
   };
   partners: PartnerInfo[];
+  accountInfo: AccountInfo<Buffer>;
 };
 
 export type PoolInfo = BasePoolInfo<GammaToken>;

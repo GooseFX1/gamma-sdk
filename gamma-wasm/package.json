@@ -1,0 +1,11 @@
+{
+  "name": "gamma-wasm",
+  "version": "0.1.0",
+  "files": [
+    "gamma_wasm_bg.wasm",
+    "gamma_wasm.js",
+    "gamma_wasm.d.ts"
+  ],
+  "main": "gamma_wasm.js",
+  "types": "gamma_wasm.d.ts"
+}

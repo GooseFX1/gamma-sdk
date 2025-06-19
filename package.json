@@ -30,13 +30,15 @@
     "build-docs": "typedoc",
     "build-docs-watch": "typedoc --watch",
     "build-dist": "rm -rf dist && mkdir dist && yarn build-docs",
-    "build-lib": "rm -rf lib && tsup src --format cjs,esm --dts --sourcemap --no-splitting --minify -d lib --silent",
+    "build-wasm": "webpack --config webpack.config.js",
+    "build-lib": "rm -rf lib && tsup --config tsup.config.ts",
     "build-all": "yarn build-dist && yarn build-lib",
     "build": "yarn build-lib && yarn copy-package-json",
     "push": "yarn build && yarn publish",
     "prepare": "husky install",
     "copy-package-json": "cp package.json lib/package.json",
-    "typecheck": "npx tsc --noEmit"
+    "typecheck": "npx tsc --noEmit",
+    "copy-wasm": "mkdir -p lib/gamma-wasm && cp gamma-wasm/gamma_wasm*.{js,wasm,d.ts} lib/gamma-wasm/"
   },
   "resolutions": {
     "@solana/spl-token": "^0.4.6",
@@ -77,6 +79,7 @@
     "@types/node": "^17.0.35",
     "@typescript-eslint/eslint-plugin": "^5.25.0",
     "@typescript-eslint/parser": "^5.25.0",
+    "@wasm-tool/wasm-pack-plugin": "^1.7.0",
     "babel-jest": "^27.5.1",
     "eslint": "^8.15.0",
     "eslint-plugin-tsdoc": "^0.2.16",
@@ -87,10 +90,13 @@
     "semantic-release": "^23.0.0",
     "ts-jest": "^27.0.7",
     "ts-jest-resolver": "^2.0.0",
+    "ts-loader": "^9.5.2",
     "ts-node": "^10.7.0",
     "tsup": "^5.12.8",
     "typedoc": "^0.22.15",
     "typescript": "~5.5.0",
+    "webpack": "^5.99.9",
+    "webpack-cli": "^6.0.1",
     "yarn": "^1.22.19"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
